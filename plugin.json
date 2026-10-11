@@ -1,10 +1,11 @@
 {
     "id": "memes",
     "name": "Memes",
-    "description": "Gives you the ability to quickly create and post memes via a /meme slash command.",
+    "description": "Make memes from popular templates, with top, middle and bottom captions, from the Memes tab of the emoji picker or with /meme.",
     "homepage_url": "https://github.com/antimatterchat/antimatter-plugin-memes",
     "support_url": "https://github.com/antimatterchat/antimatter-plugin-memes/issues",
-    "version": "1.5.0",
+    "icon_path": "assets/icon.svg",
+    "version": "1.6.0",
     "min_server_version": "12.0.0",
     "server": {
         "executables": {
@@ -15,6 +16,9 @@
             "windows-amd64": "server/dist/plugin-windows-amd64.exe"
         },
         "executable": ""
+    },
+    "webapp": {
+        "bundle_path": "webapp/dist/main.js"
     },
     "settings_schema": {
         "header": "",

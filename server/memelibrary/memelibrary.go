@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang/freetype/truetype"
 
-	"github.com/mattermost/mattermost-plugin-memes/server/meme"
+	"github.com/antimatterchat/antimatter-plugin-memes/server/meme"
 )
 
 var fonts = make(map[string]*truetype.Font)

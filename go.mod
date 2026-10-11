@@ -1,4 +1,4 @@
-module github.com/mattermost/mattermost-plugin-memes
+module github.com/antimatterchat/antimatter-plugin-memes
 
 go 1.12
 

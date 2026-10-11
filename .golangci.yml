@@ -6,7 +6,7 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/mattermost/mattermost-plugin-demo
+    local-prefixes: github.com/antimatterchat/antimatter-plugin-memes
   govet:
     check-shadowing: true
     enable-all: true

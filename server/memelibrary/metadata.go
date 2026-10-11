@@ -8,7 +8,7 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/mattermost/mattermost-plugin-memes/server/meme"
+	"github.com/antimatterchat/antimatter-plugin-memes/server/meme"
 )
 
 type Pattern struct {

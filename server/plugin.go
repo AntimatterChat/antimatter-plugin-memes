@@ -17,8 +17,8 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
 
-	"github.com/mattermost/mattermost-plugin-memes/server/meme"
-	"github.com/mattermost/mattermost-plugin-memes/server/memelibrary"
+	"github.com/antimatterchat/antimatter-plugin-memes/server/meme"
+	"github.com/antimatterchat/antimatter-plugin-memes/server/memelibrary"
 )
 
 const memeCommand = "meme"

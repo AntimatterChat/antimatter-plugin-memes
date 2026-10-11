@@ -29,6 +29,7 @@ type Slot struct {
 }
 
 type Metadata struct {
+	Title    string
 	Aliases  []string
 	Patterns []*Pattern
 	Slots    []*Slot

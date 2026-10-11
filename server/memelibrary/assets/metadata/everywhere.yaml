@@ -1,3 +1,4 @@
+title: "X, X everywhere"
 patterns:
   - pattern: (.+[\.,]) (.+) (everywhere[^a-z]*)
     text:

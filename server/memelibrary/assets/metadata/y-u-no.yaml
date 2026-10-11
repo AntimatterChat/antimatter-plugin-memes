@@ -1,3 +1,4 @@
+title: "Y U NO"
 patterns:
   - pattern: (.+) (y u .+)
     text:

@@ -75,35 +75,6 @@ func demo(args []string) error {
 	return nil
 }
 
-func serveTemplateJPEG(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	templateName := vars["name"]
-
-	template := memelibrary.Template(templateName)
-	if template == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	query := r.URL.Query()
-	text := query["text"]
-
-	img, err := template.Render(text)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=604800")
-	if err := jpeg.Encode(w, img, &jpeg.Options{
-		Quality: 90,
-	}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 type Plugin struct {
 	plugin.MattermostPlugin
 
@@ -112,10 +83,9 @@ type Plugin struct {
 
 func (p *Plugin) OnActivate() error {
 	if p.API.GetConfig().ServiceSettings.SiteURL == nil {
-		p.API.LogError("SiteURL must be set. Some features will operate incorrectly if the SiteURL is not set. See documentation for details: http://about.mattermost.com/default-site-url")
+		p.API.LogError("The Site URL must be set (System Console > Environment > Web Server) for the memes of /meme to show.")
 	}
-	p.router = mux.NewRouter()
-	p.router.HandleFunc("/templates/{name}.jpg", serveTemplateJPEG).Methods("GET")
+	p.initRouter()
 	if err := p.API.RegisterCommand(createMemesCommand()); err != nil {
 		return errors.Wrapf(err, "failed to register %s command", memeCommand)
 	}

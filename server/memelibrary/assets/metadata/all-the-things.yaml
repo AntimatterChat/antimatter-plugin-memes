@@ -1,3 +1,4 @@
+title: "X all the things"
 patterns:
   - pattern: ((?:\b\S+\b\W*){1,2}) all the ((?:\b\S+\b\W*){1,2})
     text:

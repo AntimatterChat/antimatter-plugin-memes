@@ -1,3 +1,4 @@
+title: "Am I the only one around here"
 patterns:
   - pattern: am i the only one (here|around here)? (.*)
     text:

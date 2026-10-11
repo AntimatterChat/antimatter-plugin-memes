@@ -3,6 +3,7 @@ package memelibrary
 import (
 	"bytes"
 	"image"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -37,7 +38,7 @@ func init() {
 	fontAssets, _ := AssetDir("fonts")
 	for _, assetName := range fontAssets {
 		fontName := strings.TrimSuffix(assetName, filepath.Ext(assetName))
-		font, err := truetype.Parse(MustAsset(filepath.Join("fonts", assetName)))
+		font, err := truetype.Parse(MustAsset(path.Join("fonts", assetName)))
 		if err != nil {
 			panic(err)
 		}
@@ -50,7 +51,7 @@ func init() {
 			continue
 		}
 		templateName := strings.TrimSuffix(assetName, filepath.Ext(assetName))
-		images[templateName] = mustLoadImage(filepath.Join("images", assetName))
+		images[templateName] = mustLoadImage(path.Join("images", assetName))
 	}
 
 	metadataAssets, _ := AssetDir("metadata")
@@ -62,7 +63,7 @@ func init() {
 
 		templateName := strings.TrimSuffix(assetName, ext)
 
-		m, err := ParseMetadata(MustAsset(filepath.Join("metadata", assetName)))
+		m, err := ParseMetadata(MustAsset(path.Join("metadata", assetName)))
 		if err != nil {
 			panic(err)
 		}

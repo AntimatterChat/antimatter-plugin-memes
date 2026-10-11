@@ -4,13 +4,14 @@
     "description": "Gives you the ability to quickly create and post memes via a /meme slash command.",
     "homepage_url": "https://github.com/antimatterchat/antimatter-plugin-memes",
     "support_url": "https://github.com/antimatterchat/antimatter-plugin-memes/issues",
-    "release_notes_url": "https://github.com/antimatterchat/antimatter-plugin-memes/releases/tag/v1.5.0",
     "version": "1.5.0",
-    "min_server_version": "5.2.0",
+    "min_server_version": "12.0.0",
     "server": {
         "executables": {
-            "linux-amd64": "server/dist/plugin-linux-amd64",
             "darwin-amd64": "server/dist/plugin-darwin-amd64",
+            "darwin-arm64": "server/dist/plugin-darwin-arm64",
+            "linux-amd64": "server/dist/plugin-linux-amd64",
+            "linux-arm64": "server/dist/plugin-linux-arm64",
             "windows-amd64": "server/dist/plugin-windows-amd64.exe"
         },
         "executable": ""

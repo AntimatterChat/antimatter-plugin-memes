@@ -1,0 +1,21 @@
+title: "Wait, it's all X? Always has been"
+aliases:
+  - wait-its-all
+patterns:
+  - pattern: (wait,? it'?s all .+?) (always has been.*)
+    text:
+      - $1
+      - $2
+    example: wait, it's all ohio? always has been
+slots:
+  - x: 250
+    y: 130
+    width: 380
+    height: 100
+  - x: 590
+    y: 6
+    width: 360
+    height: 64
+example:
+  - Wait, it's all YAML?
+  - Always has been

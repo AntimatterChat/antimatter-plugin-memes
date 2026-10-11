@@ -13,7 +13,7 @@ import (
 
 func TestList(t *testing.T) {
 	list := List()
-	require.Len(t, list, 55)
+	require.Len(t, list, 57)
 	byName := map[string]Info{}
 	for i, info := range list {
 		byName[info.Name] = info

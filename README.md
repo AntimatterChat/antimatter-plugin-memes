@@ -2,7 +2,8 @@
 
 Make memes in [Antimatter](https://github.com/antimatterchat/antimatter) from the most popular text-on-image
 templates: Disaster Girl, "X, X everywhere", "I don't always X, but when I do", Drake, the distracted
-boyfriend, Success Kid, "This is fine" and fifty more.
+boyfriend, "Wait, it's all X? Always has been", Anakin and Padmé's "…, right?", Success Kid, "This is fine"
+and fifty more.
 
 <img src="screenshot.png" width="880" alt="The meme dialog: a template with its top and bottom captions, and its preview" />
 

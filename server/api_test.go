@@ -49,7 +49,7 @@ func TestTemplatesAndRender(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	var list []map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &list))
-	assert.Len(t, list, 55)
+	assert.Len(t, list, 57)
 
 	w = do(p, http.MethodGet, "/api/v1/templates/everywhere/render?top=memes&bottom=memes+everywhere", "u1", nil)
 	require.Equal(t, http.StatusOK, w.Code)

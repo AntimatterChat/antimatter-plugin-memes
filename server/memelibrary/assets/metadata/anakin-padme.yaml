@@ -1,0 +1,26 @@
+title: "Anakin and Padmé: …, right?"
+aliases:
+  - right-right
+  - for-the-better-right
+slots:
+  - x: 12
+    y: 286
+    width: 360
+    height: 92
+  - x: 396
+    y: 286
+    width: 360
+    height: 92
+  - x: 12
+    y: 670
+    width: 360
+    height: 92
+  - x: 396
+    y: 670
+    width: 360
+    height: 92
+example:
+  - We're moving everything to microservices
+  - So it will be simpler, right?
+  - ""
+  - So it will be simpler, right?

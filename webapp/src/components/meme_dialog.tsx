@@ -240,7 +240,7 @@ export function MemeDialog({request, fusion}: {request: DialogRequest; fusion: b
             }}
         >
             <div
-                className={k('modal') + ' ammemes-dialog'}
+                className={k('modal', 'wide') + ' ammemes-dialog'}
                 role='dialog'
                 aria-modal='true'
                 aria-label={heading}

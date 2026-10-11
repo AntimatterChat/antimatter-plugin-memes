@@ -33,8 +33,9 @@
 /* The emoji picker's tab styles fill its icons; this is a line icon. */
 .emoji-picker svg.ammemes-tab-icon { fill: none !important; }
 
-/* Both UIs: the dialog */
-.ammemes-dialog { width: min(880px, 100%) !important; max-width: calc(100vw - 32px); }
+/* Both UIs: the dialog (Fusion's wide modal, wider) */
+.ammemes-dialog { width: min(880px, calc(100vw - 32px)); }
+:is(.am-app, .am-layer) .am-modal.am-wide.ammemes-dialog { width: min(880px, 100%); }
 .ammemes-editor { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 720px) {
     .ammemes-editor { grid-template-columns: minmax(0, 1fr); }

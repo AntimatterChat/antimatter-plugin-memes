@@ -4,7 +4,7 @@ Make memes in [Antimatter](https://github.com/antimatterchat/antimatter) from th
 templates: Disaster Girl, "X, X everywhere", "I don't always X, but when I do", Drake, the distracted
 boyfriend, Success Kid, "This is fine" and fifty more.
 
-<img src="screenshot.png" width="760" alt="The meme dialog: a template with its top and bottom captions, and its preview" />
+<img src="screenshot.png" width="880" alt="The meme dialog: a template with its top and bottom captions, and its preview" />
 
 ## Using it
 

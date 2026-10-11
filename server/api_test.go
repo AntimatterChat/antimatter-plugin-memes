@@ -66,7 +66,9 @@ func TestPostMeme(t *testing.T) {
 	api.On("GetPost", "root").Return(&model.Post{Id: "root", ChannelId: "c1"}, nil)
 	api.On("UploadFile", mock.Anything, "c1", "disaster-girl.jpg").Return(&model.FileInfo{Id: "f1"}, nil)
 	api.On("CreatePost", mock.MatchedBy(func(post *model.Post) bool {
-		return post.UserId == "u1" && post.ChannelId == "c1" && post.RootId == "root" && len(post.FileIds) == 1 && post.FileIds[0] == "f1"
+		meme, ok := post.GetProp(memeProp).(map[string]any)
+		return post.UserId == "u1" && post.ChannelId == "c1" && post.RootId == "root" && len(post.FileIds) == 1 && post.FileIds[0] == "f1" &&
+			ok && meme["template"] == "disaster-girl" && meme["top"] == "my code"
 	})).Return(&model.Post{Id: "p1", CreateAt: 42}, nil)
 	api.On("KVGet", "recent_u1").Return(nil, nil)
 	var saved []byte

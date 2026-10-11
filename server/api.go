@@ -170,6 +170,15 @@ type Meme struct {
 	CreateAt int64 `json:"create_at,omitempty"`
 }
 
+// props is the meme as a post prop.
+func (m Meme) props() map[string]any {
+	boxes := make([]any, 0, len(m.Boxes))
+	for _, b := range m.Boxes {
+		boxes = append(boxes, b)
+	}
+	return map[string]any{"template": m.Template, "top": m.Top, "middle": m.Middle, "bottom": m.Bottom, "boxes": boxes}
+}
+
 func (p *Plugin) handlePost(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-Id")
 	var req postRequest
@@ -240,10 +249,14 @@ func (p *Plugin) postMeme(userID string, req postRequest) (*model.Post, error) {
 		ChannelId: req.ChannelID,
 		RootId:    req.RootID,
 		FileIds:   model.StringArray{info.Id},
-		Props:     model.StringInterface{memeProp: m},
+		// Props cross the plugin RPC: plain maps and slices only.
+		Props: model.StringInterface{memeProp: m.props()},
 	})
 	if appErr != nil {
 		return nil, appErr
+	}
+	if post == nil {
+		return nil, &apiError{http.StatusInternalServerError, "the meme could not be posted"}
 	}
 	m.CreateAt = post.CreateAt
 	p.remember(userID, m)

@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin/plugintest"
@@ -101,4 +103,13 @@ func TestPostMemeRefused(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, post("u1", map[string]any{"channel_id": "c1", "root_id": "elsewhere", "template": "doge", "top": "wow"}))
 	assert.Equal(t, http.StatusBadRequest, post("u1", map[string]any{"channel_id": "c1", "template": "doge"}), "nothing written")
 	assert.Equal(t, http.StatusNotFound, post("u1", map[string]any{"channel_id": "c1", "template": "nope", "top": "x"}))
+}
+
+// The /meme images need no login: a long text took minutes of CPU to fit before it was bounded.
+func TestCommandMemeBoundsText(t *testing.T) {
+	p := newTestPlugin(&plugintest.API{})
+	start := time.Now()
+	w := do(p, http.MethodGet, "/templates/everywhere.jpg?text="+strings.Repeat("memes+", 50000)+"&text=everywhere", "", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Less(t, time.Since(start), 10*time.Second)
 }

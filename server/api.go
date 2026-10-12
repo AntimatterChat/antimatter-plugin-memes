@@ -28,6 +28,10 @@ const memeProp = "am_meme"
 // recentLimit is how many memes the picker remembers for each person.
 const recentLimit = 12
 
+// maxCommandText bounds each text of a /meme image, which anyone may ask for: longer ones would only
+// cost the server time, shrunk below legibility anyway.
+const maxCommandText = 1000
+
 // apiError is an error with the HTTP status to answer.
 type apiError struct {
 	status int
@@ -320,6 +324,11 @@ func serveCommandMeme(w http.ResponseWriter, r *http.Request) {
 	text := r.URL.Query()["text"]
 	if len(text) > memelibrary.MaxBoxes {
 		text = text[:memelibrary.MaxBoxes]
+	}
+	for i, t := range text {
+		if runes := []rune(t); len(runes) > maxCommandText {
+			text[i] = string(runes[:maxCommandText])
+		}
 	}
 	img, err := template.Render(text)
 	if err != nil {

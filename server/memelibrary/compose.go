@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"sort"
+	"strings"
 	"sync"
 	"unicode/utf8"
 
@@ -46,13 +47,10 @@ func (c Captions) Validate() error {
 	return nil
 }
 
-// Empty tells whether there's no text at all.
+// Empty tells whether there's no text at all (blanks don't count, as in the dialog).
 func (c Captions) Empty() bool {
-	if c.Top != "" || c.Middle != "" || c.Bottom != "" {
-		return false
-	}
-	for _, b := range c.Boxes {
-		if b != "" {
+	for _, s := range append([]string{c.Top, c.Middle, c.Bottom}, c.Boxes...) {
+		if strings.TrimSpace(s) != "" {
 			return false
 		}
 	}

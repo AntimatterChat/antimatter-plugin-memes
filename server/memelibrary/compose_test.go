@@ -62,5 +62,6 @@ func TestThumbnail(t *testing.T) {
 func TestCaptionsEmpty(t *testing.T) {
 	assert.True(t, Captions{Boxes: []string{"", ""}}.Empty())
 	assert.False(t, Captions{Boxes: []string{"", "x"}}.Empty())
+	assert.True(t, Captions{Top: "  ", Boxes: []string{"\t"}}.Empty())
 	assert.False(t, Captions{Middle: "x"}.Empty())
 }

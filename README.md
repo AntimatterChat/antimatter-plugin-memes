@@ -47,6 +47,16 @@ To preview a meme from the terminal:
 go run ./server -out demo.jpg 'memes. memes everywhere' && xdg-open demo.jpg
 ```
 
+## Feedback and support
+
+Found a bug in the Memes plugin, or missing a feature? Please [open an
+issue](https://github.com/AntimatterChat/community/issues/new/choose) in the [Antimatter community
+repository](https://github.com/AntimatterChat/community), where the feedback for every part of
+Antimatter is gathered. Questions and ideas are welcome in its
+[Discussions](https://github.com/AntimatterChat/community/discussions). Please report security
+problems privately, as explained in the [security
+policy](https://github.com/AntimatterChat/.github/blob/main/SECURITY.md).
+
 ## Thanks
 
 This plugin started as [mattermost-plugin-memes](https://github.com/mattermost/mattermost-plugin-memes), a

@@ -23,6 +23,24 @@
     "settings_schema": {
         "header": "",
         "footer": "* To report an issue, make a suggestion or a contribution, [check the repository](https://github.com/antimatterchat/antimatter-plugin-memes).",
-        "settings": null
+        "settings": [
+            {
+                "key": "WhoCanAddTemplates",
+                "display_name": "Who can add meme templates",
+                "type": "dropdown",
+                "default": "everyone",
+                "help_text": "Who can add meme templates of their own from the Memes tab of the emoji picker. Everyone can use them once they're added; their creators and system admins can delete them.",
+                "options": [
+                    {
+                        "display_name": "Everyone",
+                        "value": "everyone"
+                    },
+                    {
+                        "display_name": "System admins",
+                        "value": "admins"
+                    }
+                ]
+            }
+        ]
     }
 }

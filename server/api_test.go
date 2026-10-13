@@ -18,7 +18,7 @@ import (
 )
 
 func newTestPlugin(api *plugintest.API) *Plugin {
-	p := &Plugin{}
+	p := &Plugin{store: newCustomStore(newFakeKV())}
 	p.SetAPI(api)
 	p.initRouter()
 	return p

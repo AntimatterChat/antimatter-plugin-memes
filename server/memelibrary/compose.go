@@ -137,15 +137,30 @@ func Compose(name string, c Captions) (image.Image, error) {
 		return nil, err
 	}
 	img := images[name]
+	var boxes []*meme.TextSlot
+	if m := metadata[name]; len(m.Slots) > 0 {
+		boxes = m.TextSlots(img.Bounds())
+	}
+	return render(name, img, c, boxes)
+}
+
+// ComposeImage draws captions across an image that isn't one of the built-in templates (a custom
+// template): its top, middle and bottom captions, as on the built-in ones.
+func ComposeImage(img image.Image, c Captions) (image.Image, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return render("", img, Captions{Top: c.Top, Middle: c.Middle, Bottom: c.Bottom}, nil)
+}
+
+// render draws the captions across an image, then the text of its own boxes.
+func render(name string, img image.Image, c Captions, boxes []*meme.TextSlot) (image.Image, error) {
 	slots := captionSlots(img.Bounds())
 	text := []string{c.Top, c.Middle, c.Bottom}
-	if m := metadata[name]; len(m.Slots) > 0 {
-		boxes := m.TextSlots(img.Bounds())
-		for i, slot := range boxes {
-			if i < len(c.Boxes) {
-				slots = append(slots, slot)
-				text = append(text, c.Boxes[i])
-			}
+	for i, slot := range boxes {
+		if i < len(c.Boxes) {
+			slots = append(slots, slot)
+			text = append(text, c.Boxes[i])
 		}
 	}
 	t := &meme.Template{Name: name, Image: img, TextSlots: slots}
@@ -164,14 +179,24 @@ func Thumbnail(name string, width int) image.Image {
 	if img, ok := thumbnails.Load(key); ok {
 		return img.(image.Image)
 	}
-	src := images[name]
+	dst := Scale(images[name], width)
+	thumbnails.Store(key, dst)
+	return dst
+}
+
+// Scale returns an image scaled down to a width, or the image itself when it's not wider.
+func Scale(src image.Image, width int) image.Image {
 	b := src.Bounds()
 	if width <= 0 || width >= b.Dx() {
 		return src
 	}
-	height := b.Dy() * width / b.Dx()
+	height := max(1, b.Dy()*width/b.Dx())
 	dst := image.NewRGBA(image.Rect(0, 0, width, height))
 	xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, b, xdraw.Src, nil)
-	thumbnails.Store(key, dst)
 	return dst
+}
+
+// Font returns the content of the font of the captions (Anton), for the clients' previews.
+func Font() []byte {
+	return MustAsset("fonts/Anton-Regular.ttf")
 }

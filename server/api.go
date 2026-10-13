@@ -9,8 +9,11 @@ import (
 	"errors"
 	"image"
 	"image/jpeg"
+	"io"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -49,12 +52,17 @@ func (p *Plugin) initRouter() {
 	r := mux.NewRouter()
 	// The image of a meme made with /meme (and the legacy links of its posts).
 	r.HandleFunc("/templates/{name}.jpg", serveCommandMeme).Methods(http.MethodGet)
+	// The font of the captions, for the previews of the dialog adding a template.
+	r.HandleFunc("/fonts/anton.ttf", serveFont).Methods(http.MethodGet)
 
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.Use(requireUser)
+	api.HandleFunc("/config", p.handleConfig).Methods(http.MethodGet)
 	api.HandleFunc("/templates", p.handleTemplates).Methods(http.MethodGet)
-	api.HandleFunc("/templates/{name}/thumbnail", handleThumbnail).Methods(http.MethodGet)
-	api.HandleFunc("/templates/{name}/render", handleRender).Methods(http.MethodGet)
+	api.HandleFunc("/templates", p.handleAddTemplate).Methods(http.MethodPost)
+	api.HandleFunc("/templates/{name}", p.handleDeleteTemplate).Methods(http.MethodDelete)
+	api.HandleFunc("/templates/{name}/thumbnail", p.handleThumbnail).Methods(http.MethodGet)
+	api.HandleFunc("/templates/{name}/render", p.handleRender).Methods(http.MethodGet)
 	api.HandleFunc("/memes", p.handlePost).Methods(http.MethodPost)
 	api.HandleFunc("/recent", p.handleRecent).Methods(http.MethodGet)
 	p.router = r
@@ -99,21 +107,147 @@ func writeJPEG(w http.ResponseWriter, img image.Image, cache string) {
 	_, _ = w.Write(data)
 }
 
-func (p *Plugin) handleTemplates(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, memelibrary.List())
+func writeImageError(w http.ResponseWriter, r *http.Request, err error) {
+	if statusFor(err) == http.StatusNotFound {
+		http.NotFound(w, r)
+		return
+	}
+	http.Error(w, err.Error(), statusFor(err))
 }
 
-func handleThumbnail(w http.ResponseWriter, r *http.Request) {
+// templateInfo describes a template for the meme picker: a built-in one or a custom one.
+type templateInfo struct {
+	memelibrary.Info
+	// Captions are the captions a custom template takes, in order (top, middle and bottom when
+	// empty).
+	Captions []string `json:"captions,omitempty"`
+	// Keywords are the search keywords of a custom template.
+	Keywords []string `json:"keywords,omitempty"`
+	Custom   bool     `json:"custom,omitempty"`
+	// CanDelete tells whether the user can delete the custom template.
+	CanDelete bool `json:"can_delete,omitempty"`
+	// Version is the creation time of a custom template, for the browsers' caches of its images:
+	// another template can get the name of a deleted one.
+	Version int64 `json:"version,omitempty"`
+}
+
+func customInfo(t *CustomTemplate, canDelete bool) templateInfo {
+	return templateInfo{
+		Info:      memelibrary.Info{Name: t.Name, Title: t.Title, Width: t.Width, Height: t.Height},
+		Captions:  t.captions(),
+		Keywords:  t.Keywords,
+		Custom:    true,
+		CanDelete: canDelete,
+		Version:   t.CreateAt,
+	}
+}
+
+func (p *Plugin) isAdmin(userID string) bool {
+	return p.API.HasPermissionTo(userID, model.PermissionManageSystem)
+}
+
+// canAdd tells whether someone can add custom templates: everyone, or system admins only.
+func (p *Plugin) canAdd(userID string) bool {
+	return p.getConfiguration().everyoneCanAdd() || p.isAdmin(userID)
+}
+
+// canDelete tells whether someone can delete a custom template: its creator, or a system admin.
+func canDelete(userID string, t *CustomTemplate, admin bool) bool {
+	return admin || t.CreatorID == userID
+}
+
+// clientConfig is what the webapp needs to know of the settings.
+type clientConfig struct {
+	// CanAdd tells whether the user can add templates.
+	CanAdd bool `json:"can_add"`
+	// MaxFileSize is the largest image file of a template, in bytes.
+	MaxFileSize int `json:"max_file_size"`
+}
+
+func (p *Plugin) handleConfig(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, clientConfig{CanAdd: p.canAdd(r.Header.Get("Mattermost-User-Id")), MaxFileSize: maxUploadBytes})
+}
+
+// handleTemplates lists the built-in and custom templates, by title.
+func (p *Plugin) handleTemplates(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-Id")
+	builtin := memelibrary.List()
+	custom, _, err := p.store.list()
+	if err != nil {
+		p.API.LogWarn("Could not list the custom meme templates", "error", err.Error())
+	}
+	list := make([]templateInfo, 0, len(builtin)+len(custom))
+	for _, info := range builtin {
+		list = append(list, templateInfo{Info: info})
+	}
+	admin := len(custom) > 0 && p.isAdmin(userID)
+	for _, t := range custom {
+		// A built-in template of a later version of the plugin may take the name of a custom one.
+		if memelibrary.Canonical(t.Name) != "" {
+			continue
+		}
+		list = append(list, customInfo(t, canDelete(userID, t, admin)))
+	}
+	sort.SliceStable(list, func(i, j int) bool { return strings.ToLower(list[i].Title) < strings.ToLower(list[j].Title) })
+	writeJSON(w, http.StatusOK, list)
+}
+
+// lookup finds a template by its name: a built-in one (or an alias of it), else a custom one.
+func (p *Plugin) lookup(name string) (string, *CustomTemplate, error) {
+	if c := memelibrary.Canonical(name); c != "" {
+		return c, nil, nil
+	}
+	t, err := p.store.get(name)
+	if err != nil {
+		return "", nil, err
+	}
+	if t == nil {
+		return "", nil, &apiError{http.StatusNotFound, "unknown template"}
+	}
+	return t.Name, t, nil
+}
+
+// compose draws captions on a built-in or custom template; those of a custom one are the ones
+// of its layout.
+func (p *Plugin) compose(name string, custom *CustomTemplate, c memelibrary.Captions) (image.Image, error) {
+	if custom == nil {
+		return memelibrary.Compose(name, c)
+	}
+	img, err := p.store.image(custom)
+	if err != nil {
+		return nil, err
+	}
+	return memelibrary.ComposeImage(img, custom.apply(c))
+}
+
+func (p *Plugin) handleThumbnail(w http.ResponseWriter, r *http.Request) {
 	width, _ := strconv.Atoi(r.URL.Query().Get("width"))
 	if width <= 0 || width > 640 {
 		width = 240
 	}
-	img := memelibrary.Thumbnail(mux.Vars(r)["name"], width)
-	if img == nil {
-		http.NotFound(w, r)
+	name, custom, err := p.lookup(mux.Vars(r)["name"])
+	if err != nil {
+		writeImageError(w, r, err)
 		return
 	}
-	writeJPEG(w, img, "private, max-age=86400")
+	if custom == nil {
+		writeJPEG(w, memelibrary.Thumbnail(name, width), "private, max-age=86400")
+		return
+	}
+	data, err := p.store.thumbnail(custom, width)
+	if err != nil {
+		writeImageError(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "private, max-age=86400")
+	_, _ = w.Write(data)
+}
+
+func serveFont(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "font/ttf")
+	w.Header().Set("Cache-Control", "public, max-age=604800")
+	_, _ = w.Write(memelibrary.Font())
 }
 
 // captionsFromQuery reads ?top=&middle=&bottom=&box=&box=...
@@ -123,13 +257,13 @@ func captionsFromQuery(r *http.Request) memelibrary.Captions {
 }
 
 // handleRender draws a meme for the creation dialog's preview.
-func handleRender(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-	if memelibrary.Canonical(name) == "" {
-		http.NotFound(w, r)
+func (p *Plugin) handleRender(w http.ResponseWriter, r *http.Request) {
+	name, custom, err := p.lookup(mux.Vars(r)["name"])
+	if err != nil {
+		writeImageError(w, r, err)
 		return
 	}
-	img, err := memelibrary.Compose(name, captionsFromQuery(r))
+	img, err := p.compose(name, custom, captionsFromQuery(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -217,21 +351,25 @@ func (p *Plugin) checkCanPost(userID, channelID, rootID string) error {
 }
 
 func (p *Plugin) postMeme(userID string, req postRequest) (*model.Post, error) {
-	name := memelibrary.Canonical(req.Template)
-	if name == "" {
-		return nil, &apiError{http.StatusNotFound, "unknown template"}
+	name, custom, err := p.lookup(req.Template)
+	if err != nil {
+		return nil, err
 	}
-	if err := req.Captions.Validate(); err != nil {
+	captions := req.Captions
+	if custom != nil {
+		captions = custom.apply(captions)
+	}
+	if err := captions.Validate(); err != nil {
 		return nil, &apiError{http.StatusBadRequest, err.Error()}
 	}
-	if req.Captions.Empty() {
+	if captions.Empty() {
 		return nil, &apiError{http.StatusBadRequest, "write something on the meme"}
 	}
 	if err := p.checkCanPost(userID, req.ChannelID, req.RootID); err != nil {
 		return nil, err
 	}
 
-	img, err := memelibrary.Compose(name, req.Captions)
+	img, err := p.compose(name, custom, captions)
 	if err != nil {
 		return nil, &apiError{http.StatusBadRequest, err.Error()}
 	}
@@ -243,7 +381,7 @@ func (p *Plugin) postMeme(userID string, req postRequest) (*model.Post, error) {
 	if appErr != nil {
 		return nil, appErr
 	}
-	m := Meme{Template: name, Captions: req.Captions}
+	m := Meme{Template: name, Captions: captions}
 	post, appErr := p.API.CreatePost(&model.Post{
 		UserId:    userID,
 		ChannelId: req.ChannelID,
@@ -295,4 +433,111 @@ func (p *Plugin) remember(userID string, m Meme) {
 
 func (p *Plugin) handleRecent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, p.recent(r.Header.Get("Mattermost-User-Id")))
+}
+
+// handleAddTemplate adds a custom template (multipart/form-data: file, title, keywords and
+// layout), and returns it. It's also the first of its creator's recent memes, for them to find it.
+func (p *Plugin) handleAddTemplate(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-Id")
+	if !p.canAdd(userID) {
+		writeError(w, &apiError{http.StatusForbidden, "you can't add meme templates"})
+		return
+	}
+	tooLarge := &apiError{http.StatusRequestEntityTooLarge, "the image is larger than 5 MB"}
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes+64<<10)
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			writeError(w, tooLarge)
+			return
+		}
+		writeError(w, &apiError{http.StatusBadRequest, "invalid request"})
+		return
+	}
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
+
+	title := strings.Join(strings.Fields(r.FormValue("title")), " ")
+	if err := validTitle(title); err != nil {
+		writeError(w, err)
+		return
+	}
+	keywords := r.FormValue("keywords")
+	if len([]rune(keywords)) > maxKeywordsLength {
+		writeError(w, &apiError{http.StatusBadRequest, "the keywords are too long"})
+		return
+	}
+	layout := r.FormValue("layout")
+	if layout == "" {
+		layout = defaultLayout
+	}
+	if _, ok := layouts[layout]; !ok {
+		writeError(w, &apiError{http.StatusBadRequest, "unknown caption layout"})
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, &apiError{http.StatusBadRequest, "an image is required"})
+		return
+	}
+	defer file.Close()
+	if header.Size > maxUploadBytes {
+		writeError(w, tooLarge)
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maxUploadBytes+1))
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	if len(data) > maxUploadBytes {
+		writeError(w, tooLarge)
+		return
+	}
+	img, bounds, err := normalizeImage(data)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	t, err := p.store.add(&CustomTemplate{
+		Title:     title,
+		Keywords:  parseKeywords(keywords),
+		Layout:    layout,
+		Width:     bounds.Dx(),
+		Height:    bounds.Dy(),
+		CreatorID: userID,
+		CreateAt:  model.GetMillis(),
+	}, img)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	p.remember(userID, Meme{Template: t.Name, CreateAt: t.CreateAt})
+	p.templatesChanged()
+	writeJSON(w, http.StatusCreated, customInfo(t, true))
+}
+
+// handleDeleteTemplate deletes a custom template: its creator or a system admin can.
+func (p *Plugin) handleDeleteTemplate(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-Id")
+	name := mux.Vars(r)["name"]
+	if memelibrary.Canonical(name) != "" {
+		writeError(w, &apiError{http.StatusForbidden, "the built-in templates can't be deleted"})
+		return
+	}
+	t, err := p.store.remove(name, func(t *CustomTemplate) error {
+		if !canDelete(userID, t, p.isAdmin(userID)) {
+			return &apiError{http.StatusForbidden, "only its creator or a system admin can delete this template"}
+		}
+		return nil
+	})
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	if t.CreatorID != userID {
+		p.API.LogInfo("A meme template was deleted by a system admin", "template", t.Name, "title", t.Title, "creator_id", t.CreatorID, "user_id", userID)
+	}
+	p.templatesChanged()
+	writeJSON(w, http.StatusOK, map[string]string{"status": "OK"})
 }

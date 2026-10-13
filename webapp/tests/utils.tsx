@@ -18,15 +18,24 @@ export const templates: Template[] = [
     {name: 'the-most-interesting-man-in-the-world', title: "I don't always X, but when I do", aliases: ['i-dont-always'], width: 500, height: 300, boxes: 0},
 ];
 
-type Route = {method?: string; path: string; body: unknown; status?: number};
+// A custom template, which the user can delete.
+export const custom: Template = {name: 'lab-cat', title: 'Lab cat', width: 400, height: 300, boxes: 0, captions: ['bottom'], keywords: ['office'], custom: true, can_delete: true, version: 42};
+
+// A route answers the requests whose URL includes its path, or ends with it when exact.
+type Route = {method?: string; path: string; exact?: boolean; body: unknown; status?: number};
 
 // mockFetch answers the plugin's API from routes, and records the requests.
 export function mockFetch(routes: Route[]) {
     const calls: Array<{method: string; url: string; body?: unknown}> = [];
-    global.fetch = jest.fn(async (url: string, options?: {method?: string; body?: string}) => {
+    global.fetch = jest.fn(async (url: string, options?: {method?: string; body?: string | FormData}) => {
         const method = options?.method || 'GET';
-        calls.push({method, url, body: options?.body ? JSON.parse(options.body) : null});
-        const route = routes.find((r) => (r.method || 'GET') === method && url.includes(r.path));
+        let body: unknown = options?.body ?? null;
+        if (typeof body === 'string') {
+            body = JSON.parse(body);
+        }
+        calls.push({method, url, body});
+        const path = url.split('?')[0];
+        const route = routes.find((r) => (r.method || 'GET') === method && (r.exact ? path.endsWith(r.path) : url.includes(r.path)));
         const status = route ? route.status || 200 : 404;
         return {ok: status < 300, status, statusText: 'error', json: async () => (route ? route.body : {error: 'not found'})};
     }) as unknown as typeof fetch;

@@ -6,8 +6,10 @@ import {useIntl} from 'react-intl';
 
 import {renderURL, thumbnailURL} from '../client';
 import {messages} from '../messages';
-import {matches, useRecent, useTemplates} from '../state';
+import {matches, openDeleteTemplate, useRecent, useTemplates} from '../state';
 import type {Captions, Template} from '../types/memes';
+
+import {TrashIcon} from './icons';
 
 type Props = {
     query: string;
@@ -15,7 +17,8 @@ type Props = {
 };
 
 // Gallery shows the meme templates, with the memes the user made last first (when there's no
-// search): picking one starts a meme with it, or from the recent meme's captions.
+// search): picking one starts a meme with it, or from the recent meme's captions. The custom
+// templates the user can delete (theirs, or any for a system admin) have a delete button.
 export default function Gallery({query, onPick}: Props) {
     const intl = useIntl();
     const {data: templates, error} = useTemplates();
@@ -51,8 +54,8 @@ export default function Gallery({query, onPick}: Props) {
                                     onClick={() => onPick(t, m)}
                                 >
                                     <img
-                                        src={renderURL(m.template, m)}
-                                        alt={[m.top, m.middle, m.bottom, ...(m.boxes || [])].filter(Boolean).join(' / ')}
+                                        src={renderURL(m.template, m, t.version)}
+                                        alt={[m.top, m.middle, m.bottom, ...(m.boxes || [])].filter(Boolean).join(' / ') || t.title}
                                         loading='lazy'
                                     />
                                 </button>
@@ -64,22 +67,45 @@ export default function Gallery({query, onPick}: Props) {
             )}
             {shown.length === 0 && <div className='ammemes-empty'>{intl.formatMessage(messages.noMatch, {query: query.trim()})}</div>}
             <div className='ammemes-grid'>
-                {shown.map((t) => (
-                    <button
-                        key={t.name}
-                        type='button'
-                        className='ammemes-tile'
-                        title={t.title}
-                        onClick={() => onPick(t)}
-                    >
-                        <img
-                            src={thumbnailURL(t.name)}
-                            alt=''
-                            loading='lazy'
-                        />
-                        <span>{t.title}</span>
-                    </button>
-                ))}
+                {shown.map((t) => {
+                    const tile = (
+                        <button
+                            key={t.name}
+                            type='button'
+                            className='ammemes-tile'
+                            title={t.title}
+                            onClick={() => onPick(t)}
+                        >
+                            <img
+                                src={thumbnailURL(t.name, 240, t.version)}
+                                alt=''
+                                loading='lazy'
+                            />
+                            <span>{t.title}</span>
+                        </button>
+                    );
+                    if (!t.custom || !t.can_delete) {
+                        return tile;
+                    }
+                    const label = intl.formatMessage(messages.deleteTemplate, {title: t.title});
+                    return (
+                        <div
+                            key={t.name}
+                            className='ammemes-tile-wrap'
+                        >
+                            {tile}
+                            <button
+                                type='button'
+                                className='ammemes-tile-delete'
+                                title={label}
+                                aria-label={label}
+                                onClick={() => openDeleteTemplate(t)}
+                            >
+                                <TrashIcon className='ammemes-ic'/>
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

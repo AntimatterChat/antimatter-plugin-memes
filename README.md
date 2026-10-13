@@ -22,6 +22,21 @@ and fifty more.
 Memes are posted as you, with the same checks as your own messages: you need to be allowed to post in the
 channel, and archived channels take no memes.
 
+## Adding templates
+
+The **+** next to the search box of the Memes tab adds a template of your own: a PNG, JPEG, GIF (its first frame)
+or WebP image up to 5 MB, its name, search keywords, and where its captions go (top and bottom, top only, bottom
+only, or top, middle and bottom), with a preview. It's in the gallery right away, for everyone, and first in your
+last memes; **Make a meme with it** opens the meme dialog on it. `/meme <its-name> "caption"` works too, with the
+captions in the order of its layout.
+
+The server scales templates down to 1024 pixels a side and keeps them in the plugin's key-value store, so they
+need no file storage and work the same with local and S3 storage. Each gets a name of its own, which no built-in
+template has. Their creators and system admins can delete them, from the delete button of their tiles.
+
+In **System Console > Plugins > Memes**, **Who can add meme templates** is everyone by default, or system admins
+only; the **+** shows only for those who can.
+
 ## Installation
 
 1. Download the latest release from https://github.com/antimatterchat/antimatter-plugin-memes/releases/latest.

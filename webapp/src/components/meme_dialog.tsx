@@ -8,9 +8,10 @@ import {useIntl} from 'react-intl';
 import {postMeme, renderURL} from '../client';
 import {messages} from '../messages';
 import {closeDialog, useDialog, useTemplates, type DialogRequest} from '../state';
-import type {Captions, Template} from '../types/memes';
-import {classNames, isFusionUI} from '../web_ui';
+import type {CaptionKey, Captions, Template} from '../types/memes';
+import {classNames, isFusionUI, layerContainer} from '../web_ui';
 
+import {AddButton} from './add_template_dialog';
 import Gallery from './gallery';
 import {SearchIcon} from './icons';
 
@@ -26,6 +27,9 @@ function useDebounced<T>(value: T, delay: number): T {
 }
 
 const EMPTY: Captions = {top: '', middle: '', bottom: '', boxes: []};
+
+// The captions of the built-in templates: across the image, at its top, middle and bottom.
+const ALL_CAPTIONS: CaptionKey[] = ['top', 'middle', 'bottom'];
 
 // placeholders are a template's example text: its top and bottom captions, or its boxes.
 export function placeholders(t: Template) {
@@ -51,14 +55,16 @@ function Editor({fusion, request, template, onOtherTemplate}: EditorProps) {
     const first = useRef<HTMLInputElement>(null);
     const hints = placeholders(template);
 
-    const preview = useDebounced(renderURL(template.name, captions), PREVIEW_DELAY);
+    const preview = useDebounced(renderURL(template.name, captions, template.version), PREVIEW_DELAY);
+    const shown = template.captions?.length ? template.captions : ALL_CAPTIONS;
+    const labels = {top: messages.top, middle: messages.middle, bottom: messages.bottom};
     const [loaded, setLoaded] = useState('');
 
     useEffect(() => {
         first.current?.focus();
     }, [template.name]);
 
-    const empty = ![captions.top, captions.middle, captions.bottom, ...(captions.boxes || [])].some((s) => s.trim());
+    const empty = ![...shown.map((key) => captions[key]), ...(captions.boxes || [])].some((s) => s.trim());
 
     const set = (key: 'top' | 'middle' | 'bottom', value: string) => setCaptions((c) => ({...c, [key]: value}));
     const setBox = (i: number, value: string) => setCaptions((c) => {
@@ -90,11 +96,12 @@ function Editor({fusion, request, template, onOtherTemplate}: EditorProps) {
         }
     };
 
-    const field = (key: 'top' | 'middle' | 'bottom', label: string, ref?: React.Ref<HTMLInputElement>) => (
+    const field = (key: 'top' | 'middle' | 'bottom', label: string, ref?: React.Ref<HTMLInputElement> | null) => (
         <label className={k('field')}>
             <span>{label}</span>
             <input
                 ref={ref}
+                type='text'
                 value={captions[key]}
                 placeholder={hints[key as 'top' | 'bottom'] || ''}
                 maxLength={200}
@@ -130,9 +137,11 @@ function Editor({fusion, request, template, onOtherTemplate}: EditorProps) {
                             {intl.formatMessage(messages.otherTemplate)}
                         </button>
                     </div>
-                    {field('top', intl.formatMessage(messages.top), first)}
-                    {field('middle', intl.formatMessage(messages.middle))}
-                    {field('bottom', intl.formatMessage(messages.bottom))}
+                    {shown.map((key, i) => (
+                        <React.Fragment key={key}>
+                            {field(key, intl.formatMessage(labels[key]), i === 0 ? first : null)}
+                        </React.Fragment>
+                    ))}
                     {template.boxes > 0 && <p className='ammemes-help'>{intl.formatMessage(messages.boxesHelp)}</p>}
                     {Array.from({length: template.boxes}, (_, i) => (
                         <label
@@ -141,6 +150,7 @@ function Editor({fusion, request, template, onOtherTemplate}: EditorProps) {
                         >
                             <span>{intl.formatMessage(messages.box, {n: i + 1})}</span>
                             <input
+                                type='text'
                                 value={captions.boxes?.[i] || ''}
                                 placeholder={hints.boxes[i] || ''}
                                 maxLength={200}
@@ -180,7 +190,7 @@ function Editor({fusion, request, template, onOtherTemplate}: EditorProps) {
     );
 }
 
-function Chooser({fusion, onPick}: {fusion: boolean; onPick: (t: Template, c?: Captions) => void}) {
+function Chooser({fusion, request, onPick}: {fusion: boolean; request: DialogRequest; onPick: (t: Template, c?: Captions) => void}) {
     const intl = useIntl();
     const k = classNames(fusion);
     const [query, setQuery] = useState('');
@@ -199,6 +209,11 @@ function Chooser({fusion, onPick}: {fusion: boolean; onPick: (t: Template, c?: C
                         onChange={(e) => setQuery(e.target.value)}
                     />
                 </label>
+                <AddButton
+                    request={{channelId: request.channelId, rootId: request.rootId}}
+                    fusion={fusion}
+                    onClose={closeDialog}
+                />
             </div>
             <div className='ammemes-chooser-body'>
                 <Gallery
@@ -258,6 +273,7 @@ export function MemeDialog({request, fusion}: {request: DialogRequest; fusion: b
                     ) : (
                         <Chooser
                             fusion={fusion}
+                            request={request}
                             onPick={(t, captions) => setChoice({name: t.name, captions})}
                         />
                     )}
@@ -265,25 +281,6 @@ export function MemeDialog({request, fusion}: {request: DialogRequest; fusion: b
             </div>
         </div>
     );
-}
-
-// layerContainer is where dialogs go: Fusion's layer, else the page.
-function layerContainer(fusion: boolean): HTMLElement {
-    if (!fusion) {
-        return document.body;
-    }
-    const layer = document.getElementById('am-layer');
-    if (layer) {
-        return layer;
-    }
-    let own = document.getElementById('ammemes-layer');
-    if (!own) {
-        own = document.createElement('div');
-        own.id = 'ammemes-layer';
-        own.className = 'am-layer';
-        document.body.appendChild(own);
-    }
-    return own;
 }
 
 // MemeDialogRoot shows the meme dialog while it's open (see openDialog); a root component, so that

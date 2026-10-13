@@ -6,12 +6,14 @@ import {FormattedMessage} from 'react-intl';
 
 import {Client4} from 'mattermost-redux/client';
 
+import AddTemplateDialogRoot from './components/add_template_dialog';
+import DeleteTemplateDialogRoot from './components/delete_template_dialog';
 import {MemeIcon} from './components/icons';
 import MemeDialogRoot from './components/meme_dialog';
 import MemesTab from './components/memes_tab';
 import manifest from './manifest';
 import {messages} from './messages';
-import {closeDialog, openDialog, resetTemplates} from './state';
+import {closeAddTemplate, closeDeleteTemplate, closeDialog, openDialog, resetConfig, resetTemplates} from './state';
 import type {PluginClass, PluginRegistry, SlashCommandArgs, SlashCommandResult} from './types/host';
 
 import './styles.css';
@@ -37,6 +39,8 @@ export default class Plugin implements PluginClass {
         }
 
         registry.registerRootComponent(MemeDialogRoot);
+        registry.registerRootComponent(AddTemplateDialogRoot);
+        registry.registerRootComponent(DeleteTemplateDialogRoot);
         registry.registerSlashCommandWillBePostedHook(openFromCommand);
 
         if (typeof registry.registerEmojiPickerTab === 'function') {
@@ -66,7 +70,10 @@ export default class Plugin implements PluginClass {
 
     public uninitialize() {
         closeDialog();
+        closeAddTemplate();
+        closeDeleteTemplate();
         resetTemplates();
+        resetConfig();
     }
 }
 

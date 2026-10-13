@@ -14,6 +14,39 @@ export type Template = {
 
     // Example text: the top and bottom captions when the template has no boxes, else one per box.
     example?: string[];
+
+    // The captions a custom template takes, in order (all three when absent).
+    captions?: CaptionKey[];
+
+    // The search keywords of a custom template.
+    keywords?: string[];
+
+    // Whether people added the template, and whether the user can delete it (its creator or a
+    // system admin).
+    custom?: boolean;
+    can_delete?: boolean;
+
+    // The creation time of a custom template, for the caches of its images.
+    version?: number;
+};
+
+export type CaptionKey = 'top' | 'middle' | 'bottom';
+
+// The caption layouts of custom templates.
+export type Layout = 'top-bottom' | 'top' | 'bottom' | 'top-middle-bottom';
+
+// What the webapp needs to know of the plugin's settings.
+export type Config = {
+    can_add: boolean;
+    max_file_size: number;
+};
+
+// A template to add.
+export type NewTemplate = {
+    file: File;
+    title: string;
+    keywords: string;
+    layout: Layout;
 };
 
 // What someone writes on a template.

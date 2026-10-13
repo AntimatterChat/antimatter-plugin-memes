@@ -11,7 +11,7 @@ import {renderURL} from './client';
 import MemeDialogRoot, {placeholders} from './components/meme_dialog';
 import MemesTab from './components/memes_tab';
 
-import {closeDialog, matches, openDialog, resetTemplates} from './state';
+import {closeDialog, matches, openDialog, resetConfig, resetTemplates} from './state';
 
 import {openFromCommand} from './index';
 
@@ -19,6 +19,7 @@ jest.mock('./manifest', () => ({__esModule: true, default: {id: 'memes'}}));
 
 beforeEach(() => {
     resetTemplates();
+    resetConfig();
     act(() => closeDialog());
 });
 

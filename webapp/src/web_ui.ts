@@ -18,3 +18,22 @@ export function classNames(fusion: boolean) {
     const prefix = fusion ? 'am-' : 'ammemes-';
     return (...names: Array<string | false | null | undefined>) => names.filter(Boolean).map((n) => prefix + n).join(' ');
 }
+
+// layerContainer is where dialogs go: Fusion's layer, else the page.
+export function layerContainer(fusion: boolean): HTMLElement {
+    if (!fusion) {
+        return document.body;
+    }
+    const layer = document.getElementById('am-layer');
+    if (layer) {
+        return layer;
+    }
+    let own = document.getElementById('ammemes-layer');
+    if (!own) {
+        own = document.createElement('div');
+        own.id = 'ammemes-layer';
+        own.className = 'am-layer';
+        document.body.appendChild(own);
+    }
+    return own;
+}

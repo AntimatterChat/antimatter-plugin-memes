@@ -9,12 +9,14 @@ import {openDialog} from '../state';
 import type {EmojiPickerTabProps} from '../types/host';
 import {classNames} from '../web_ui';
 
+import {AddButton} from './add_template_dialog';
 import Gallery from './gallery';
 import {SearchIcon} from './icons';
 
 // MemesTab is the Memes tab of the host's emoji picker (after Emoji): the meme templates, searched
 // with the picker's search box. Picking one closes the picker and opens the meme dialog, which
-// posts to the message box's channel or thread.
+// posts to the message box's channel or thread. Next to the search box, the users who can add
+// templates have a button for it, as in the GIF and sticker tabs.
 export default function MemesTab({channelId, rootId, filter, onFilterChange, onSelectDone, isFusion}: EmojiPickerTabProps) {
     const intl = useIntl();
     const k = classNames(isFusion);
@@ -36,6 +38,11 @@ export default function MemesTab({channelId, rootId, filter, onFilterChange, onS
                         onChange={(e) => onFilterChange(e.target.value)}
                     />
                 </label>
+                <AddButton
+                    request={{channelId, rootId}}
+                    fusion={isFusion}
+                    onClose={onSelectDone}
+                />
             </div>
             <div className={k('picker-body') + ' ammemes-picker-body'}>
                 <Gallery

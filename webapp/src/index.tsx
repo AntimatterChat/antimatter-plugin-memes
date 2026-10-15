@@ -15,6 +15,7 @@ import manifest from './manifest';
 import {messages} from './messages';
 import {closeAddTemplate, closeDeleteTemplate, closeDialog, openDialog, resetConfig, resetTemplates} from './state';
 import type {PluginClass, PluginRegistry, SlashCommandArgs, SlashCommandResult} from './types/host';
+import {registerTranslations} from './translations';
 
 import './styles.css';
 
@@ -34,6 +35,8 @@ export function openFromCommand(message: string, args: SlashCommandArgs): SlashC
 
 export default class Plugin implements PluginClass {
     public initialize(registry: PluginRegistry) {
+        registerTranslations(registry);
+
         if (window.basename) {
             Client4.setUrl(window.basename);
         }

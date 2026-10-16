@@ -62,6 +62,12 @@ To preview a meme from the terminal:
 go run ./server -out demo.jpg 'memes. memes everywhere' && xdg-open demo.jpg
 ```
 
+## Documentation
+
+See the [user guide](https://antimatter.chat/docs/users/apps.html#gifs-stickers-memes) and the
+[admin guide](https://antimatter.chat/docs/admins/apps.html#kanban-notes) on
+[antimatter.chat/docs](https://antimatter.chat/docs/).
+
 ## Feedback and support
 
 Found a bug in the Memes plugin, or missing a feature? Please [open an

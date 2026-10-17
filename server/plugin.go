@@ -35,7 +35,7 @@ func resolveMeme(input string) (*meme.Template, []string, error) {
 	if template := memelibrary.Template(parts[0]); template != nil {
 		return template, parts[1:], nil
 	}
-	return nil, nil, fmt.Errorf("i don't know this meme")
+	return nil, nil, fmt.Errorf("no meme template is called %q", parts[0])
 }
 
 func demo(args []string) error {
@@ -146,18 +146,18 @@ func (p *Plugin) OnPluginClusterEvent(_ *plugin.Context, ev model.PluginClusterE
 
 func createMemesCommand(custom []string) *model.Command {
 	var availableMemes = getAvailableMemes(custom)
-	memes := model.NewAutocompleteData(memeCommand, "[meme-name]", "Create awesome Memes yourself!")
+	memes := model.NewAutocompleteData(memeCommand, "[template]", "Make a meme from a template")
 
 	for _, name := range availableMemes {
-		currentMeme := model.NewAutocompleteData(name, "", fmt.Sprintf("sends %s meme", name))
-		currentMeme.AddTextArgument("displays text on meme", "[text]", "")
+		currentMeme := model.NewAutocompleteData(name, "", fmt.Sprintf("Posts a meme of the %s template", name))
+		currentMeme.AddTextArgument("The captions, each in quotes", "[\"caption\" \"caption\"]", "")
 		memes.AddCommand(currentMeme)
 	}
 
 	return &model.Command{
 		Trigger:          memeCommand,
 		AutoComplete:     true,
-		AutoCompleteDesc: "Renders custom memes so you can express yourself with culture.",
+		AutoCompleteDesc: "Make a meme from a template, with your own captions.",
 		AutocompleteData: memes,
 	}
 }
@@ -177,30 +177,28 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	p.router.ServeHTTP(w, r)
 }
 
+// helpText is the answer to /meme help: how to make a meme, an example, and the templates' names.
+func helpText(siteURL string, templates []string) string {
+	example := siteURL + "/plugins/memes/templates/brace-yourselves.jpg?text=brace+yourself.&text=memes+are+coming."
+	return "Type `/meme` on its own to choose a template and write the captions, with a preview.\n\n" +
+		"To post one straight from the message box, name a template, then give its captions, each in quotes:\n\n" +
+		"`/meme brace-yourself \"brace yourself.\" \"memes are coming.\"`\n\n" +
+		"Some templates also recognise their usual wording, without quotes:\n\n" +
+		"`/meme brace yourself. memes are coming.`\n\n" +
+		"Either way, you get:\n\n" +
+		"![Brace yourselves: memes are coming](" + example + ")\n\n" +
+		"Templates: " + strings.Join(templates, ", ")
+}
+
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	siteURL := p.GetSiteURL()
 
 	input := strings.TrimSpace(strings.TrimPrefix(args.Command, "/meme"))
 
 	if input == "" || input == "help" {
-		var availableMemes = getAvailableMemes(p.customNames())
 		return &model.CommandResponse{
 			ResponseType: model.CommandResponseTypeEphemeral,
-			Text: `You can get started meming in one of two ways:
-
-If your meme has well-defined phrasing, you can just type it:
-
-` + "`" + `/meme brace yourself. memes are coming.` + "`" + `
-
-If your meme doesn't have well-defined phrasing or you want more control, you can name a meme, then follow it with text to fill the slots:
-
-` + "`" + `/meme brace-yourself "brace yourself." "memes are coming."` + "`" + `
-
-In either case...
-
-![brace-yourself](` + siteURL + `/plugins/memes/templates/brace-yourselves.jpg?text=brace+yourself.&text=memes+are+coming.)
-
-Available memes: ` + strings.Join(availableMemes, ", "),
+			Text:         helpText(siteURL, getAvailableMemes(p.customNames())),
 		}, nil
 	}
 
@@ -209,7 +207,7 @@ Available memes: ` + strings.Join(availableMemes, ", "),
 		if resp, appErr, ok := p.executeCustomMeme(args, input); ok {
 			return resp, appErr
 		}
-		return nil, model.NewAppError("ExecuteCommand", "error resolving meme", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("ExecuteCommand", "There's no meme template by that name. Type /meme help to see them.", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	queryString := ""

@@ -28,6 +28,10 @@ export type Template = {
 
     // The creation time of a custom template, for the caches of its images.
     version?: number;
+
+    // Who added a custom template, and when (ms).
+    creator_id?: string;
+    create_at?: number;
 };
 
 export type CaptionKey = 'top' | 'middle' | 'bottom';
@@ -39,6 +43,11 @@ export type Layout = 'top-bottom' | 'top' | 'bottom' | 'top-middle-bottom';
 export type Config = {
     can_add: boolean;
     max_file_size: number;
+
+    // Whether custom templates are on, and whether the user may delete others' (a system admin).
+    // Older servers leave them out: custom templates are on there.
+    custom_templates?: boolean;
+    can_delete_others?: boolean;
 };
 
 // A template to add.

@@ -30,6 +30,84 @@ export type EmojiPickerTabProps = {
     // Whether the Fusion UI renders the tab.
     isFusion: boolean;
     insertText?: (text: string) => void;
+
+    // Antimatter Fusion: the components of the picker's add and manage views, so that the tab's
+    // views look like the emoji tab's and stay inside the picker. Older hosts and the classic UI
+    // leave it out: the tab keeps its dialogs then.
+    pickerKit?: PickerKit;
+};
+
+// The picker views of the Fusion UI (fusion/popovers/picker_views.tsx), as the host hands them to
+// its picker's tabs: the same components as its emoji tab's add and manage views.
+export type PickerListItem = {
+    id: string;
+    name: string;
+    image: React.ReactNode;
+    by?: string;
+    at?: number;
+    canDelete: boolean;
+};
+
+export type PickerKit = {
+    version: number;
+
+    // Which view shows: 'grid' or one of the tab's; back() gives the focus back to the button
+    // that opened the view, back(false) leaves it to the tab (e.g. on what was just added).
+    usePickerView: <V extends string>() => [V | 'grid', (view: V) => void, (restoreFocus?: unknown) => void];
+
+    // Runs onEscape on Escape while active, before the picker would close.
+    useOnEscape: (active: boolean, onEscape: () => void) => void;
+
+    // The "+" (add) and manage buttons next to the search box; each only with its handler.
+    PickerViewButtons: React.ComponentType<{onAdd?: () => void; onManage?: () => void; addLabel: string; manageLabel: string}>;
+
+    // A view: back arrow and title, scrolling body, actions; a form with onSubmit.
+    PickerViewFrame: React.ComponentType<{
+        title: string;
+        onBack: () => void;
+        tools?: React.ReactNode;
+        actions?: React.ReactNode;
+        variant?: 'picker' | 'page';
+        noBack?: boolean;
+        children: React.ReactNode;
+        onSubmit?: () => void;
+    }>;
+    PickerNotice: React.ComponentType<{kind?: 'error' | 'ok' | 'info'; children: React.ReactNode}>;
+    PickerField: React.ComponentType<{
+        label: string;
+        hint?: React.ReactNode;
+        error?: React.ReactNode;
+        ok?: React.ReactNode;
+        aside?: React.ReactNode;
+        children: (ids: {id: string; describedBy: string; invalid: boolean}) => React.ReactNode;
+    }>;
+    PickerSearch: React.ComponentType<{value: string; onChange: (value: string) => void; placeholder: string; autoFocus?: boolean}>;
+
+    // Takes a file chosen, dropped on it, or pasted in its view.
+    PickerDropZone: React.ComponentType<{
+        accept: string;
+        file: File | null;
+        onFile: (file: File) => void;
+        label: string;
+        hint: React.ReactNode;
+        error?: React.ReactNode;
+        preview?: React.ReactNode;
+        changeLabel: string;
+    }>;
+
+    // What was added, with who and when, deletable where allowed after a confirmation in the row.
+    PickerManageList: React.ComponentType<{
+        items: PickerListItem[];
+        onDelete: (item: PickerListItem) => Promise<string | void>;
+        confirmText: (item: PickerListItem) => string;
+        deleteLabel: (item: PickerListItem) => string;
+        deletedText: (item: PickerListItem) => string;
+        empty: string;
+        loading?: boolean;
+        hasMore?: boolean;
+        onLoadMore?: () => void;
+        onOpen?: (item: PickerListItem) => void;
+    }>;
 };
 
 export type SlashCommandArgs = {

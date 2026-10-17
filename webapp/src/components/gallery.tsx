@@ -1,7 +1,7 @@
 // Copyright (c) 2026-present Antimatter contributors.
 // See LICENSE for license information.
 
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 import {useIntl} from 'react-intl';
 
 import {renderURL, thumbnailURL} from '../client';
@@ -14,15 +14,33 @@ import {TrashIcon} from './icons';
 type Props = {
     query: string;
     onPick: (template: Template, captions?: Captions) => void;
+
+    // A template just added: shown first, with the focus, ready to use.
+    highlight?: string;
+
+    // Whether the templates the user can delete have a delete button (not in the Fusion picker,
+    // whose manage view deletes them).
+    deletable?: boolean;
 };
 
 // Gallery shows the meme templates, with the memes the user made last first (when there's no
 // search): picking one starts a meme with it, or from the recent meme's captions. The custom
 // templates the user can delete (theirs, or any for a system admin) have a delete button.
-export default function Gallery({query, onPick}: Props) {
+export default function Gallery({query, onPick, highlight, deletable = true}: Props) {
     const intl = useIntl();
     const {data: templates, error} = useTemplates();
     const recent = useRecent();
+    const newRef = useRef<HTMLButtonElement>(null);
+    const fresh = highlight && !query.trim() ? templates?.find((t) => t.name === highlight) : undefined;
+
+    // After the picker's view closed, which gives the focus back first.
+    useEffect(() => {
+        if (!fresh) {
+            return undefined;
+        }
+        const timer = setTimeout(() => newRef.current?.focus(), 0);
+        return () => clearTimeout(timer);
+    }, [fresh?.name]);
 
     if (error) {
         return <div className='ammemes-empty'>{intl.formatMessage(messages.loadFailed, {error})}</div>;
@@ -40,6 +58,27 @@ export default function Gallery({query, onPick}: Props) {
 
     return (
         <div className='ammemes-gallery'>
+            {fresh && (
+                <>
+                    <div className='ammemes-heading'>{intl.formatMessage(messages.justAdded)}</div>
+                    <div className='ammemes-grid'>
+                        <button
+                            ref={newRef}
+                            type='button'
+                            className='ammemes-tile ammemes-tile-new'
+                            title={fresh.title}
+                            onClick={() => onPick(fresh)}
+                        >
+                            <img
+                                src={thumbnailURL(fresh.name, 240, fresh.version)}
+                                alt=''
+                            />
+                            <span>{fresh.title}</span>
+                        </button>
+                    </div>
+                    {recentShown.length === 0 && <div className='ammemes-heading'>{intl.formatMessage(messages.templates)}</div>}
+                </>
+            )}
             {recentShown.length > 0 && (
                 <>
                     <div className='ammemes-heading'>{intl.formatMessage(messages.recent)}</div>
@@ -84,7 +123,7 @@ export default function Gallery({query, onPick}: Props) {
                             <span>{t.title}</span>
                         </button>
                     );
-                    if (!t.custom || !t.can_delete) {
+                    if (!t.custom || !t.can_delete || !deletable) {
                         return tile;
                     }
                     const label = intl.formatMessage(messages.deleteTemplate, {title: t.title});

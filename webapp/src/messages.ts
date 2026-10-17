@@ -55,4 +55,22 @@ export const messages = defineMessages({
     deleteConfirm: {id: 'memes.delete.confirm', defaultMessage: 'Delete'},
     deleting: {id: 'memes.delete.deleting', defaultMessage: 'Deleting…'},
     deleteFailed: {id: 'memes.delete.failed', defaultMessage: 'Couldn’t delete it: {error}'},
+
+    // The views of the Fusion picker's Memes tab: adding a template and managing the custom ones
+    manageTemplates: {id: 'memes.manage.title', defaultMessage: 'Custom meme templates', description: 'Title of the view of the emoji picker\'s Memes tab listing the meme templates people added, and the tooltip of the button next to the search box that opens it.'},
+    manageSearch: {id: 'memes.manage.search', defaultMessage: 'Search custom templates', description: 'Placeholder and label of the search box of the list of custom meme templates.'},
+    manageEmpty: {id: 'memes.manage.empty', defaultMessage: 'Nobody has added a meme template yet.', description: 'Shown in the list of custom meme templates when there are none.'},
+    manageNoMatch: {id: 'memes.manage.noMatch', defaultMessage: 'No custom template matches “{query}”.', description: 'Shown in the list of custom meme templates when the search finds none; {query} is what the person typed.'},
+    manageConfirm: {id: 'memes.manage.confirm', defaultMessage: 'Delete “{title}” for everyone? Memes already posted with it stay.', description: 'The confirmation shown in the row of a custom meme template before deleting it; {title} is the template\'s name.'},
+    manageDeleted: {id: 'memes.manage.deleted', defaultMessage: '“{title}” was deleted.', description: 'Announced once a custom meme template was deleted from the list; {title} is its name.'},
+    addChoose: {id: 'memes.add.view.choose', defaultMessage: 'Choose an image', description: 'Button of the drop zone choosing the image of a new meme template.'},
+    addChooseAnother: {id: 'memes.add.view.chooseAnother', defaultMessage: 'Choose another image', description: 'The same button once an image was chosen, to replace it.'},
+    addDropHint: {id: 'memes.add.view.dropHint', defaultMessage: 'PNG, JPEG, GIF or WebP, up to {size} MB. You can also drop an image here or paste one.', description: 'Under the drop zone of a new meme template: the image types and size limit; {size} is a number of megabytes.'},
+    addWrongType: {id: 'memes.add.view.wrongType', defaultMessage: 'This file isn’t a PNG, JPEG, GIF or WebP image.', description: 'Error when the chosen, dropped or pasted file isn\'t an image a meme template can use.'},
+    addNameRequired: {id: 'memes.add.view.nameRequired', defaultMessage: 'Give the template a name.', description: 'Error when the name of a new meme template is empty.'},
+    addNameTooLong: {id: 'memes.add.view.nameTooLong', defaultMessage: 'The name can have up to {max} characters.', description: 'Error when the name of a new meme template is too long; {max} is a number.'},
+    addNameHint: {id: 'memes.add.view.nameHint', defaultMessage: 'How people find it and how /meme names it.', description: 'Hint under the name field of a new meme template.'},
+    addImageRequired: {id: 'memes.add.view.imageRequired', defaultMessage: 'Choose an image first.', description: 'Error when saving a new meme template without an image.'},
+    addSave: {id: 'memes.add.view.save', defaultMessage: 'Save template', description: 'Button saving a new meme template, at the bottom of the view adding one.'},
+    justAdded: {id: 'memes.justAdded', defaultMessage: 'Just added', description: 'Heading of the gallery section showing the meme template the person has just added, ready to use.'},
 });

@@ -11,10 +11,11 @@ import DeleteTemplateDialogRoot from './components/delete_template_dialog';
 import {MemeIcon} from './components/icons';
 import MemeDialogRoot from './components/meme_dialog';
 import MemesTab from './components/memes_tab';
+import {resetCreators, setHostStore} from './creators';
 import manifest from './manifest';
 import {messages} from './messages';
 import {closeAddTemplate, closeDeleteTemplate, closeDialog, openDialog, resetConfig, resetTemplates} from './state';
-import type {PluginClass, PluginRegistry, SlashCommandArgs, SlashCommandResult} from './types/host';
+import type {PluginClass, PluginRegistry, PluginStore, SlashCommandArgs, SlashCommandResult} from './types/host';
 import {registerTranslations} from './translations';
 
 import './styles.css';
@@ -34,8 +35,11 @@ export function openFromCommand(message: string, args: SlashCommandArgs): SlashC
 }
 
 export default class Plugin implements PluginClass {
-    public initialize(registry: PluginRegistry) {
+    public initialize(registry: PluginRegistry, store?: PluginStore) {
         registerTranslations(registry);
+
+        // For the names of the people who added custom templates.
+        setHostStore(store || null);
 
         if (window.basename) {
             Client4.setUrl(window.basename);
@@ -77,6 +81,8 @@ export default class Plugin implements PluginClass {
         closeDeleteTemplate();
         resetTemplates();
         resetConfig();
+        resetCreators();
+        setHostStore(null);
     }
 }
 

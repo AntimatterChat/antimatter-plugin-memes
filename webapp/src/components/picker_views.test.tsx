@@ -200,6 +200,20 @@ describe('adding a template in the picker', () => {
     });
 });
 
+describe('one upload control', () => {
+    test('the template\'s image is given in the picker kit\'s drop zone only', async () => {
+        mockFetch(routes());
+        renderWithIntl(tab());
+        fireEvent.click(await screen.findByRole('button', {name: 'Add a meme template'}));
+
+        // No other file field, nor the dialog's own image chooser.
+        const view = screen.getByRole('form', {name: 'Add a meme template'});
+        expect(within(view).getAllByTestId('drop')).toHaveLength(1);
+        expect(view.querySelectorAll('input[type="file"]')).toHaveLength(1);
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+});
+
 describe('managing the custom templates in the picker', () => {
     const mine = {...custom, name: 'lab-cat', title: 'Lab cat', creator_id: 'priya', create_at: 1000, can_delete: true};
     const theirs = {...custom, name: 'office-dog', title: 'Office dog', keywords: ['monday'], creator_id: 'nina', create_at: 2000, can_delete: false};

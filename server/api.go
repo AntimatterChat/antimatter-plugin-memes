@@ -129,6 +129,10 @@ type templateInfo struct {
 	// Version is the creation time of a custom template, for the browsers' caches of its images:
 	// another template can get the name of a deleted one.
 	Version int64 `json:"version,omitempty"`
+	// CreatorID and CreateAt are who added a custom template and when (ms), for the picker's
+	// list of custom templates.
+	CreatorID string `json:"creator_id,omitempty"`
+	CreateAt  int64  `json:"create_at,omitempty"`
 }
 
 func customInfo(t *CustomTemplate, canDelete bool) templateInfo {
@@ -139,6 +143,8 @@ func customInfo(t *CustomTemplate, canDelete bool) templateInfo {
 		Custom:    true,
 		CanDelete: canDelete,
 		Version:   t.CreateAt,
+		CreatorID: t.CreatorID,
+		CreateAt:  t.CreateAt,
 	}
 }
 
@@ -146,9 +152,14 @@ func (p *Plugin) isAdmin(userID string) bool {
 	return p.API.HasPermissionTo(userID, model.PermissionManageSystem)
 }
 
-// canAdd tells whether someone can add custom templates: everyone, or system admins only.
+// canAdd tells whether someone can add custom templates: everyone (guests too), system admins
+// only, or nobody when custom templates are turned off.
 func (p *Plugin) canAdd(userID string) bool {
-	return p.getConfiguration().everyoneCanAdd() || p.isAdmin(userID)
+	c := p.getConfiguration()
+	if !c.customTemplatesOn() {
+		return false
+	}
+	return c.everyoneCanAdd() || p.isAdmin(userID)
 }
 
 // canDelete tells whether someone can delete a custom template: its creator, or a system admin.
@@ -162,10 +173,20 @@ type clientConfig struct {
 	CanAdd bool `json:"can_add"`
 	// MaxFileSize is the largest image file of a template, in bytes.
 	MaxFileSize int `json:"max_file_size"`
+	// CustomTemplates tells whether custom templates are on (people may add some).
+	CustomTemplates bool `json:"custom_templates"`
+	// CanDeleteOthers tells whether the user can delete the templates of others (a system admin).
+	CanDeleteOthers bool `json:"can_delete_others"`
 }
 
 func (p *Plugin) handleConfig(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, clientConfig{CanAdd: p.canAdd(r.Header.Get("Mattermost-User-Id")), MaxFileSize: maxUploadBytes})
+	userID := r.Header.Get("Mattermost-User-Id")
+	writeJSON(w, http.StatusOK, clientConfig{
+		CanAdd:          p.canAdd(userID),
+		MaxFileSize:     maxUploadBytes,
+		CustomTemplates: p.getConfiguration().customTemplatesOn(),
+		CanDeleteOthers: p.isAdmin(userID),
+	})
 }
 
 // handleTemplates lists the built-in and custom templates, by title.

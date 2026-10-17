@@ -454,3 +454,79 @@ func TestPostCustomMeme(t *testing.T) {
 	_, appErr = p.ExecuteCommand(nil, &model.CommandArgs{UserId: "sam", ChannelId: "c1", Command: `/meme no-such-cat "x"`})
 	require.NotNil(t, appErr)
 }
+
+// TestTemplatePermissionsByRole checks who may add and delete custom templates, as the server
+// decides for every request: a member, a system admin and a guest (who counts as everyone: the
+// plugin doesn't tell guests apart), with each WhoCanAddTemplates setting, custom templates off
+// included.
+func TestTemplatePermissionsByRole(t *testing.T) {
+	png := testPNG(t, 200, 200, color.White)
+	const (
+		member = "priya"
+		admin  = "maya"
+		guest  = "gina"
+	)
+	configFor := func(p *Plugin, userID string) clientConfig {
+		var cfg clientConfig
+		require.NoError(t, json.Unmarshal(do(p, http.MethodGet, "/api/v1/config", userID, nil).Body.Bytes(), &cfg))
+		return cfg
+	}
+	add := func(p *Plugin, userID, title string) int {
+		return upload(p, userID, map[string]string{"title": title}, png).Code
+	}
+	del := func(p *Plugin, userID, name string) int {
+		return do(p, http.MethodDelete, "/api/v1/templates/"+name, userID, nil).Code
+	}
+
+	for _, tc := range []struct {
+		setting string
+		canAdd  map[string]bool
+		on      bool
+	}{
+		{"", map[string]bool{member: true, admin: true, guest: true}, true},
+		{addTemplatesEveryone, map[string]bool{member: true, admin: true, guest: true}, true},
+		{addTemplatesAdmins, map[string]bool{member: false, admin: true, guest: false}, true},
+		{addTemplatesNobody, map[string]bool{member: false, admin: false, guest: false}, false},
+	} {
+		t.Run("setting "+tc.setting, func(t *testing.T) {
+			p := newTestPlugin(customAPI())
+			p.setConfiguration(&configuration{WhoCanAddTemplates: tc.setting})
+			for _, user := range []string{member, admin, guest} {
+				cfg := configFor(p, user)
+				assert.Equal(t, tc.canAdd[user], cfg.CanAdd, user)
+				assert.Equal(t, tc.on, cfg.CustomTemplates, user)
+				assert.Equal(t, user == admin, cfg.CanDeleteOthers, user)
+				want := http.StatusForbidden
+				if tc.canAdd[user] {
+					want = http.StatusCreated
+				}
+				assert.Equal(t, want, add(p, user, "By "+user), user)
+			}
+		})
+	}
+
+	t.Run("deleting", func(t *testing.T) {
+		p := newTestPlugin(customAPI())
+		for _, user := range []string{member, guest} {
+			require.Equal(t, http.StatusCreated, add(p, user, "By "+user))
+		}
+		list := templatesFor(t, p, member)
+		assert.Equal(t, member, list["by-priya"].CreatorID, "the creator, for the picker's list")
+		assert.NotZero(t, list["by-priya"].CreateAt)
+		assert.True(t, list["by-priya"].CanDelete)
+		assert.False(t, list["by-gina"].CanDelete)
+		assert.False(t, templatesFor(t, p, guest)["by-priya"].CanDelete)
+		assert.True(t, templatesFor(t, p, admin)["by-gina"].CanDelete)
+
+		assert.Equal(t, http.StatusForbidden, del(p, guest, "by-priya"), "a guest, another's")
+		assert.Equal(t, http.StatusForbidden, del(p, member, "by-gina"), "a member, another's")
+		assert.Equal(t, http.StatusForbidden, del(p, admin, "drake"), "built-in")
+		assert.Equal(t, http.StatusOK, del(p, guest, "by-gina"), "a guest, their own")
+
+		// Custom templates turned off: nothing new, but what's there can still be cleaned up.
+		p.setConfiguration(&configuration{WhoCanAddTemplates: addTemplatesNobody})
+		assert.Contains(t, templatesFor(t, p, member), "by-priya", "still usable")
+		assert.Equal(t, http.StatusForbidden, del(p, guest, "by-priya"))
+		assert.Equal(t, http.StatusOK, del(p, admin, "by-priya"), "a system admin, another's")
+	})
+}

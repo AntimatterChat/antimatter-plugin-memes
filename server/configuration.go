@@ -11,18 +11,26 @@ import (
 const (
 	addTemplatesEveryone = "everyone"
 	addTemplatesAdmins   = "admins"
+	// addTemplatesNobody turns custom templates off: nobody can add one. The ones already added
+	// stay usable, and their creators and system admins can still delete them.
+	addTemplatesNobody = "nobody"
 )
 
 // configuration is the plugin's settings, from the System Console.
 type configuration struct {
-	// WhoCanAddTemplates is who can add custom meme templates: everyone (the default) or admins
-	// (system admins only).
+	// WhoCanAddTemplates is who can add custom meme templates: everyone (the default), admins
+	// (system admins only) or nobody (custom templates off).
 	WhoCanAddTemplates string
 }
 
 // everyoneCanAdd tells whether all users, not only system admins, can add meme templates.
 func (c *configuration) everyoneCanAdd() bool {
-	return c == nil || c.WhoCanAddTemplates != addTemplatesAdmins
+	return c == nil || (c.WhoCanAddTemplates != addTemplatesAdmins && c.WhoCanAddTemplates != addTemplatesNobody)
+}
+
+// customTemplatesOn tells whether people may add custom templates at all.
+func (c *configuration) customTemplatesOn() bool {
+	return c == nil || c.WhoCanAddTemplates != addTemplatesNobody
 }
 
 // getConfiguration returns the active configuration; it's never changed, only replaced.

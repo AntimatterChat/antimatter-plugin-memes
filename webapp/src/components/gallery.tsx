@@ -33,15 +33,16 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
     const {data: templates, error} = useTemplates();
     const recent = useRecent();
     const newRef = useRef<HTMLButtonElement>(null);
-    const fresh = highlight && !query.trim() ? templates?.find((t) => t.name === highlight) : undefined;
+    const fresh = highlight && !query.trim() ? templates?.find((t) => t.name === highlight) : null;
 
     // After the picker's view closed, which gives the focus back first.
     useEffect(() => {
-        if (!fresh) {
-            return undefined;
-        }
-        const timer = setTimeout(() => newRef.current?.focus(), 0);
-        return () => clearTimeout(timer);
+        const timer = fresh ? setTimeout(() => newRef.current?.focus(), 0) : null;
+        return () => {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        };
     }, [fresh?.name]);
 
     if (error) {

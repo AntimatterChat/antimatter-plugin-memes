@@ -167,14 +167,16 @@ export function AddTemplateView({kit, onBack, onAdded}: AddProps) {
                 changeLabel={intl.formatMessage(messages.addChooseAnother)}
                 hint={intl.formatMessage(messages.addDropHint, {size})}
                 error={fileError}
-                preview={url ? (
-                    <TemplatePreview
-                        key={url}
-                        src={url}
-                        captions={captions}
-                        label={intl.formatMessage(messages.addPreview)}
-                    />
-                ) : undefined}
+                {...(url ? {
+                    preview: (
+                        <TemplatePreview
+                            key={url}
+                            src={url}
+                            captions={captions}
+                            label={intl.formatMessage(messages.addPreview)}
+                        />
+                    ),
+                } : {})}
             />
             <PickerField
                 label={intl.formatMessage(messages.addName)}
@@ -269,7 +271,7 @@ export function ManageTemplatesView({kit, onBack, onUse}: ManageProps) {
                 loading='lazy'
             />
         ),
-        by: t.creator_id ? names[t.creator_id] : undefined,
+        ...(t.creator_id ? {by: names[t.creator_id]} : {}),
         at: t.create_at || t.version,
         canDelete: Boolean(t.can_delete),
     }));
@@ -278,7 +280,9 @@ export function ManageTemplatesView({kit, onBack, onUse}: ManageProps) {
         try {
             await client.deleteTemplate(item.id);
             removedTemplate(item.id);
-            return undefined;
+
+            // No error: the picker kit only checks for a message.
+            return '';
         } catch (err) {
             return intl.formatMessage(messages.deleteFailed, {error: (err as Error).message});
         }

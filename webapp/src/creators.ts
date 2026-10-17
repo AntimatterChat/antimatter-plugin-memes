@@ -54,9 +54,24 @@ export function resetCreators() {
     changed();
 }
 
-function profile(id: string): UserProfile | undefined {
+function profile(id: string): UserProfile | null {
     const state = hostStore?.getState() as GlobalState | undefined;
-    return state?.entities?.users?.profiles?.[id] || fetched.get(id) || undefined;
+    return state?.entities?.users?.profiles?.[id] || fetched.get(id) || null;
+}
+
+// remember keeps the profiles fetched for ids, and null for the ids that have none.
+function remember(ids: string[], users: UserProfile[]) {
+    ids.forEach((id) => fetched.set(id, null));
+    users.forEach((u) => fetched.set(u.id, u));
+}
+
+// fetchProfiles fetches the profiles of ids the host doesn't have, once.
+function fetchProfiles(ids: string[]) {
+    ids.forEach((id) => pending.add(id));
+    Client4.getProfilesByIds(ids).then((users) => remember(ids, users || []), () => remember(ids, [])).finally(() => {
+        ids.forEach((id) => pending.delete(id));
+        changed();
+    });
 }
 
 // displayName follows the host's choice of how to name people (username, nickname or full name).
@@ -82,16 +97,7 @@ export function useCreatorNames(ids: string[]): Record<string, string> {
         if (!missing.length) {
             return;
         }
-        missing.forEach((id) => pending.add(id));
-        Client4.getProfilesByIds(missing).then((users) => {
-            missing.forEach((id) => fetched.set(id, null));
-            (users || []).forEach((u) => fetched.set(u.id, u));
-        }, () => {
-            missing.forEach((id) => fetched.set(id, null));
-        }).finally(() => {
-            missing.forEach((id) => pending.delete(id));
-            changed();
-        });
+        fetchProfiles(missing);
     }, [key]);
 
     const names: Record<string, string> = {};

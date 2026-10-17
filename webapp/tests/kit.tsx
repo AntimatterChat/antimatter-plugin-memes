@@ -1,6 +1,9 @@
 // Copyright (c) 2026-present Antimatter contributors.
 // See LICENSE for license information.
 
+// The kit's props are typed by PickerKit; prop-types adds nothing to a test double.
+/* eslint-disable react/prop-types */
+
 import React, {useState} from 'react';
 
 import type {PickerKit, PickerListItem} from '../src/types/host';
@@ -72,7 +75,7 @@ export function fakeKit(): PickerKit {
         version: 1,
         usePickerView: <V extends string>() => {
             const [view, setView] = useState<V | 'grid'>('grid');
-            return [view, (v: V) => setView(v), () => setView('grid')] as [V | 'grid', (view: V) => void, (restoreFocus?: unknown) => void];
+            return [view, (v: V) => setView(v), () => setView('grid')] as [V | 'grid', (next: V) => void, (restoreFocus?: unknown) => void];
         },
         useOnEscape: () => undefined,
         PickerViewButtons: ({onAdd, onManage, addLabel, manageLabel}) => (

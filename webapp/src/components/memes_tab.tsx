@@ -138,8 +138,8 @@ function KitMemesTab({kit, channelId, rootId, filter, onFilterChange, onSelectDo
                     />
                 </label>
                 <PickerViewButtons
-                    onAdd={canAdd(config) ? () => open('add') : undefined}
-                    onManage={canManage(config, templates) ? () => open('manage') : undefined}
+                    {...(canAdd(config) ? {onAdd: () => open('add')} : {})}
+                    {...(canManage(config, templates) ? {onManage: () => open('manage')} : {})}
                     addLabel={intl.formatMessage(messages.addTemplate)}
                     manageLabel={intl.formatMessage(messages.manageTemplates)}
                 />

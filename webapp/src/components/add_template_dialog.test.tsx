@@ -189,6 +189,56 @@ test('uses the Fusion dialog markup in its layer', async () => {
     expect(within(dialog).getByLabelText('Captions').tagName).toBe('SELECT');
 });
 
+test('under Fusion, the image field is a Fusion button over the browser\'s input', async () => {
+    window.antimatterWebUI = 'fusion';
+    mockFetch([config(true)]);
+    await act(async () => loadConfig());
+    renderWithIntl(<AddTemplateDialogRoot/>);
+    act(() => openAddTemplate({channelId: 'c1'}));
+
+    // The input is still the field's control, out of sight behind the button.
+    const input = screen.getByLabelText('Image');
+    expect(input).toHaveAttribute('type', 'file');
+    expect(input).toHaveClass('ammemes-file-input');
+    const button = input.parentElement!.querySelector('.ammemes-file-btn')!;
+    expect(button).toHaveClass('am-btn');
+    expect(button).toHaveAttribute('aria-hidden', 'true');
+    expect(button).toHaveTextContent('Choose an image');
+    expect(button.querySelector('use')).toHaveAttribute('href', '#am-i-upload');
+
+    chooseFile('office_cat.png');
+    expect(button).toHaveTextContent('Choose another image');
+    expect(screen.getByText('office_cat.png')).toHaveClass('ammemes-file-name');
+    expect(screen.getByLabelText('Name')).toHaveValue('Office cat');
+});
+
+test('under the classic UI, the image field is the browser\'s input, as before', async () => {
+    mockFetch([config(true)]);
+    await act(async () => loadConfig());
+    renderWithIntl(<AddTemplateDialogRoot/>);
+    act(() => openAddTemplate({channelId: 'c1'}));
+    expect(screen.getByLabelText('Image')).not.toHaveClass('ammemes-file-input');
+    expect(document.querySelector('.ammemes-file-btn')).toBeNull();
+});
+
+test('the add button has Fusion\'s tooltip and icon under Fusion, the browser\'s under the classic UI', async () => {
+    mockFetch([config(true), {path: '/templates', body: templates}, {path: '/recent', body: []}]);
+    await act(async () => loadConfig());
+    window.antimatterWebUI = 'fusion';
+    const {unmount} = renderWithIntl(tab(jest.fn(), true));
+    const add = await screen.findByRole('button', {name: 'Add a meme template'});
+    expect(add).toHaveAttribute('data-am-tip', 'Add a meme template');
+    expect(add).not.toHaveAttribute('title');
+    expect(add.querySelector('use')).toHaveAttribute('href', '#am-i-plus');
+    unmount();
+
+    delete window.antimatterWebUI;
+    renderWithIntl(tab());
+    const classic = await screen.findByRole('button', {name: 'Add a meme template'});
+    expect(classic).toHaveAttribute('title', 'Add a meme template');
+    expect(classic.querySelector('use')).toBeNull();
+});
+
 test('deletes a custom template from the gallery, once confirmed', async () => {
     const other = {...custom, name: 'not-mine', title: 'Not mine', can_delete: false};
     const calls = mockFetch([config(true), {path: '/templates', body: [...templates, custom, other]}, {path: '/recent', body: []}, {method: 'DELETE', path: '/templates/lab-cat', body: {status: 'OK'}}]);

@@ -56,6 +56,16 @@
 .ammemes-add-added { display: grid; place-items: center; height: 220px; margin-bottom: 12px; }
 .ammemes-add-added > img { max-width: 100%; max-height: 220px; border-radius: 8px; }
 
+/* Fusion: the dialog's image field, a Fusion button over the browser's input, which stays focusable */
+:is(.am-app, .am-layer) .ammemes-file { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; }
+:is(.am-app, .am-layer) .ammemes-file .ammemes-file-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; opacity: 0; }
+:is(.am-app, .am-layer) .ammemes-file-btn { flex: none; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+:is(.am-app, .am-layer) .ammemes-file-input:focus-visible + .ammemes-file-btn { outline: 2px solid var(--am-matter); outline-offset: 2px; }
+:is(.am-app, .am-layer) .ammemes-file-name { min-width: 0; overflow: hidden; color: var(--am-text-2); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Fusion: the gallery's empty states (components/fusion/empty_state) take the app's colour, its icon's */
+:is(.am-app, .am-layer) :is(.ammemes-picker-body, .ammemes-chooser-body) { --am-cc: var(--am-spark); }
+
 /* Both UIs: the dialog (Fusion's wide modal, wider) */
 .ammemes-dialog { width: min(880px, calc(100vw - 32px)); }
 :is(.am-app, .am-layer) .am-modal.am-wide.ammemes-dialog { width: min(880px, 100%); }

@@ -12,7 +12,8 @@ import {addedTemplate, closeAddTemplate, openAddTemplate, openDialog, useAddTemp
 import type {CaptionKey, Layout, Template} from '../types/memes';
 import {classNames, isFusionUI, layerContainer} from '../web_ui';
 
-import {PlusIcon} from './icons';
+import {iconTip} from './fusion/tip';
+import {PlusIcon, UploadIcon} from './icons';
 
 // The largest image file, unless the server says otherwise (as it does).
 const MAX_BYTES = 5 << 20;
@@ -247,14 +248,20 @@ export function AddTemplateDialog({request, fusion}: Props) {
         body = (
             <>
                 <p className={k('lead')}>{intl.formatMessage(messages.addLead, {size})}</p>
-                {field('file', intl.formatMessage(messages.addFile), (a11y) => (
+                {field('file', intl.formatMessage(messages.addFile), (a11y) => (fusion ? (
+                    <FusionFileInput
+                        a11y={a11y}
+                        file={file}
+                        onFile={onFile}
+                    />
+                ) : (
                     <input
                         {...a11y}
                         type='file'
                         accept={ACCEPT}
                         onChange={(e) => onFile(e.target.files?.[0] || null)}
                     />
-                ))}
+                )))}
                 {url && !tooLarge && (
                     <TemplatePreview
                         key={url}
@@ -344,6 +351,38 @@ export function AddTemplateDialog({request, fusion}: Props) {
     );
 }
 
+type FileInputProps = {
+    a11y: {'aria-label': string; 'aria-describedby'?: string};
+    file: File | null;
+    onFile: (file: File | null) => void;
+};
+
+// FusionFileInput is the dialog's image field under Fusion: the browser's file input, out of sight
+// but still the control the keyboard and screen readers reach, behind a Fusion button that shows
+// the chosen file (as the GIF app's). The field's label around it opens the file chooser.
+function FusionFileInput({a11y, file, onFile}: FileInputProps) {
+    const intl = useIntl();
+    return (
+        <div className='ammemes-file'>
+            <input
+                {...a11y}
+                type='file'
+                className='ammemes-file-input'
+                accept={ACCEPT}
+                onChange={(e) => onFile(e.target.files?.[0] || null)}
+            />
+            <span
+                className='am-btn ammemes-file-btn'
+                aria-hidden='true'
+            >
+                <UploadIcon className='am-ic am-sm'/>
+                {intl.formatMessage(file ? messages.addChooseAnother : messages.addChoose)}
+            </span>
+            {file && <span className='ammemes-file-name'>{file.name}</span>}
+        </div>
+    );
+}
+
 // AddButton opens the dialog adding a template, after closing the picker or dialog it's in. It
 // shows for the users who can add templates.
 export function AddButton({request, fusion, onClose}: {request: AddRequest; fusion: boolean; onClose: () => void}) {
@@ -357,8 +396,7 @@ export function AddButton({request, fusion, onClose}: {request: AddRequest; fusi
         <button
             type='button'
             className={fusion ? 'am-icon-btn' : 'ammemes-add-btn'}
-            title={label}
-            aria-label={label}
+            {...iconTip(label)}
             onClick={() => {
                 onClose();
                 openAddTemplate(request);

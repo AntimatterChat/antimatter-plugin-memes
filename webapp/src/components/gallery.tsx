@@ -9,7 +9,9 @@ import {messages} from '../messages';
 import {matches, openDeleteTemplate, useRecent, useTemplates} from '../state';
 import type {Captions, Template} from '../types/memes';
 
-import {TrashIcon} from './icons';
+import EmptyState from './fusion/empty_state';
+import {iconTip, tip} from './fusion/tip';
+import {MemeIcon, SearchIcon, TrashIcon} from './icons';
 
 type Props = {
     query: string;
@@ -43,10 +45,23 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
     }, [fresh?.name]);
 
     if (error) {
-        return <div className='ammemes-empty'>{intl.formatMessage(messages.loadFailed, {error})}</div>;
+        return (
+            <EmptyState
+                tone='danger'
+                icon={<MemeIcon className='am-ic'/>}
+                text={intl.formatMessage(messages.loadFailed, {error})}
+                classicClassName='ammemes-empty'
+            />
+        );
     }
     if (!templates) {
-        return <div className='ammemes-empty'>{intl.formatMessage(messages.loading)}</div>;
+        return (
+            <EmptyState
+                busy={true}
+                text={intl.formatMessage(messages.loading)}
+                classicClassName='ammemes-empty'
+            />
+        );
     }
 
     const byName = new Map(templates.map((t) => [t.name, t]));
@@ -66,7 +81,7 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
                             ref={newRef}
                             type='button'
                             className='ammemes-tile ammemes-tile-new'
-                            title={fresh.title}
+                            {...tip(fresh.title)}
                             onClick={() => onPick(fresh)}
                         >
                             <img
@@ -89,7 +104,7 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
                                     key={`${m.template}-${m.create_at || i}`}
                                     type='button'
                                     className='ammemes-tile'
-                                    title={t.title}
+                                    {...tip(t.title)}
                                     onClick={() => onPick(t, m)}
                                 >
                                     <img
@@ -104,7 +119,13 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
                     <div className='ammemes-heading'>{intl.formatMessage(messages.templates)}</div>
                 </>
             )}
-            {shown.length === 0 && <div className='ammemes-empty'>{intl.formatMessage(messages.noMatch, {query: query.trim()})}</div>}
+            {shown.length === 0 && (
+                <EmptyState
+                    icon={<SearchIcon className='am-ic'/>}
+                    text={intl.formatMessage(messages.noMatch, {query: query.trim()})}
+                    classicClassName='ammemes-empty'
+                />
+            )}
             <div className='ammemes-grid'>
                 {shown.map((t) => {
                     const tile = (
@@ -112,7 +133,7 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
                             key={t.name}
                             type='button'
                             className='ammemes-tile'
-                            title={t.title}
+                            {...tip(t.title)}
                             onClick={() => onPick(t)}
                         >
                             <img
@@ -136,8 +157,7 @@ export default function Gallery({query, onPick, highlight, deletable = true}: Pr
                             <button
                                 type='button'
                                 className='ammemes-tile-delete'
-                                title={label}
-                                aria-label={label}
+                                {...iconTip(label)}
                                 onClick={() => openDeleteTemplate(t)}
                             >
                                 <TrashIcon className='ammemes-ic'/>

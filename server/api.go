@@ -152,19 +152,36 @@ func (p *Plugin) isAdmin(userID string) bool {
 	return p.API.HasPermissionTo(userID, model.PermissionManageSystem)
 }
 
-// canAdd tells whether someone can add custom templates: everyone (guests too), system admins
-// only, or nobody when custom templates are turned off.
+// isGuest tells whether a user is a guest account. When the account can't be read, the user
+// counts as one: nothing is allowed that wouldn't be for a guest.
+func (p *Plugin) isGuest(userID string) bool {
+	user, appErr := p.API.GetUser(userID)
+	if appErr != nil || user == nil {
+		if appErr != nil {
+			p.API.LogWarn("Could not get the user to check their role", "user_id", userID, "error", appErr.Error())
+		}
+		return true
+	}
+	return user.IsGuest()
+}
+
+// canAdd tells whether someone can add custom templates: everyone but guests (as with custom
+// emoji), system admins only, or nobody when custom templates are turned off.
 func (p *Plugin) canAdd(userID string) bool {
 	c := p.getConfiguration()
 	if !c.customTemplatesOn() {
 		return false
 	}
-	return c.everyoneCanAdd() || p.isAdmin(userID)
+	if p.isAdmin(userID) {
+		return true
+	}
+	return c.everyoneCanAdd() && !p.isGuest(userID)
 }
 
-// canDelete tells whether someone can delete a custom template: its creator, or a system admin.
-func canDelete(userID string, t *CustomTemplate, admin bool) bool {
-	return admin || t.CreatorID == userID
+// canDelete tells whether someone can delete a custom template: its creator unless a guest (as
+// with custom emoji, guests delete none, not even their own), or a system admin.
+func canDelete(userID string, t *CustomTemplate, admin, guest bool) bool {
+	return admin || (!guest && t.CreatorID == userID)
 }
 
 // clientConfig is what the webapp needs to know of the settings.
@@ -202,12 +219,13 @@ func (p *Plugin) handleTemplates(w http.ResponseWriter, r *http.Request) {
 		list = append(list, templateInfo{Info: info})
 	}
 	admin := len(custom) > 0 && p.isAdmin(userID)
+	guest := len(custom) > 0 && !admin && p.isGuest(userID)
 	for _, t := range custom {
 		// A built-in template of a later version of the plugin may take the name of a custom one.
 		if memelibrary.Canonical(t.Name) != "" {
 			continue
 		}
-		list = append(list, customInfo(t, canDelete(userID, t, admin)))
+		list = append(list, customInfo(t, canDelete(userID, t, admin, guest)))
 	}
 	sort.SliceStable(list, func(i, j int) bool { return strings.ToLower(list[i].Title) < strings.ToLower(list[j].Title) })
 	writeJSON(w, http.StatusOK, list)
@@ -547,7 +565,8 @@ func (p *Plugin) handleDeleteTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t, err := p.store.remove(name, func(t *CustomTemplate) error {
-		if !canDelete(userID, t, p.isAdmin(userID)) {
+		admin := p.isAdmin(userID)
+		if !canDelete(userID, t, admin, !admin && p.isGuest(userID)) {
 			return &apiError{http.StatusForbidden, "only its creator or a system admin can delete this template"}
 		}
 		return nil

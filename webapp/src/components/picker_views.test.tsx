@@ -89,6 +89,16 @@ describe('the buttons next to the search box', () => {
         expect(screen.queryByRole('button', {name: 'Add a meme template'})).toBeNull();
     });
 
+    test('none for guests, even when the server says everyone can add', async () => {
+        setHostStore({getState: () => ({entities: {users: {currentUserId: 'gina', profiles: {priya, nina, gina: {id: 'gina', username: 'gina', roles: 'system_guest'}}}, general: {config: {}}}})} as unknown as PluginStore);
+        mockFetch(routes({}, [...templates, custom]));
+        renderWithIntl(tab());
+        expect(await screen.findByText('Lab cat')).toBeInTheDocument();
+        await act(async () => Promise.resolve());
+        expect(screen.queryByRole('button', {name: 'Add a meme template'})).toBeNull();
+        expect(screen.queryByRole('button', {name: 'Custom meme templates'})).toBeNull();
+    });
+
     test('none when custom templates are off, even for a system admin', async () => {
         mockFetch(routes({can_add: false, custom_templates: false, can_delete_others: true}, [...templates, custom]));
         renderWithIntl(tab());

@@ -29,7 +29,7 @@
                 "display_name": "Who can add meme templates",
                 "type": "dropdown",
                 "default": "everyone",
-                "help_text": "Who can add meme templates of their own from the Memes tab of the emoji picker. Everyone can use them once they're added; their creators and system admins can delete them. Nobody turns custom templates off: the ones already added stay usable.",
+                "help_text": "Who can add meme templates of their own from the Memes tab of the emoji picker. Everyone but guests, as with custom emoji. Everyone can use them once they're added; their creators (not guests) and system admins can delete them. Nobody turns custom templates off: the ones already added stay usable.",
                 "options": [
                     {
                         "display_name": "Everyone",

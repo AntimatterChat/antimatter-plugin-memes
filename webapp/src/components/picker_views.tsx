@@ -5,7 +5,7 @@ import React, {useEffect, useMemo, useState} from 'react';
 import {useIntl} from 'react-intl';
 
 import * as client from '../client';
-import {useCreatorNames} from '../creators';
+import {isGuest, useCreatorNames} from '../creators';
 import {messages} from '../messages';
 import {addedTemplate, matches, removedTemplate, useConfig, useTemplates} from '../state';
 import type {Layout, Template} from '../types/memes';
@@ -34,17 +34,17 @@ export function isTemplateImage(file: File) {
 }
 
 // canManage tells whether the person gets the manage button: custom templates are on and they can
-// add some, or delete some (theirs, or any as a system admin).
+// add some, or delete some (theirs, or any as a system admin). Never a guest.
 export function canManage(config: ReturnType<typeof useConfig>, templates?: Template[]) {
-    if (!config || config.custom_templates === false) {
+    if (!config || config.custom_templates === false || isGuest()) {
         return false;
     }
     return config.can_add || Boolean(config.can_delete_others) || Boolean(templates?.some((t) => t.custom && t.can_delete));
 }
 
-// canAdd tells whether the person gets the "+" button.
+// canAdd tells whether the person gets the "+" button. Never a guest.
 export function canAdd(config: ReturnType<typeof useConfig>) {
-    return Boolean(config?.can_add && config.custom_templates !== false);
+    return Boolean(config?.can_add && config.custom_templates !== false && !isGuest());
 }
 
 type AddProps = {

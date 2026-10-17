@@ -20,6 +20,16 @@ export function setHostStore(store: PluginStore | null) {
     hostStore = store;
 }
 
+// isGuest tells whether the current user is a guest account (system_guest). As with custom emoji,
+// guests neither add nor delete templates: the server refuses them, and the picker hides its
+// add and manage buttons from them.
+export function isGuest(): boolean {
+    const state = hostStore?.getState() as GlobalState | undefined;
+    const users = state?.entities?.users;
+    const me = users?.profiles?.[users.currentUserId];
+    return (me?.roles || '').split(' ').includes('system_guest');
+}
+
 const fetched = new Map<string, UserProfile | null>();
 const pending = new Set<string>();
 const listeners = new Set<() => void>();

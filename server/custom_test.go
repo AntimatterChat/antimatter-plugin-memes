@@ -307,11 +307,22 @@ func upload(p *Plugin, userID string, fields map[string]string, file []byte) *ht
 	return w
 }
 
-// customAPI mocks the API for the custom templates: maya is a system admin, priya and sam aren't.
+// customAPI mocks the API for the custom templates: maya is a system admin, priya and sam aren't,
+// and gina is a guest.
 func customAPI() *plugintest.API {
+	return customAPIWith(map[string]bool{"gina": true})
+}
+
+func customAPIWith(guests map[string]bool) *plugintest.API {
 	api := &plugintest.API{}
 	api.On("HasPermissionTo", "maya", model.PermissionManageSystem).Return(true)
 	api.On("HasPermissionTo", mock.Anything, model.PermissionManageSystem).Return(false)
+	api.On("GetUser", mock.Anything).Return(func(id string) (*model.User, *model.AppError) {
+		if guests[id] {
+			return &model.User{Id: id, Roles: model.SystemGuestRoleId}, nil
+		}
+		return &model.User{Id: id, Roles: model.SystemUserRoleId}, nil
+	}).Maybe()
 	api.On("KVGet", mock.MatchedBy(func(k string) bool { return strings.HasPrefix(k, "recent_") })).Return(nil, nil)
 	api.On("KVSet", mock.MatchedBy(func(k string) bool { return strings.HasPrefix(k, "recent_") }), mock.Anything).Return(nil)
 	api.On("RegisterCommand", mock.Anything).Return(nil)
@@ -456,9 +467,9 @@ func TestPostCustomMeme(t *testing.T) {
 }
 
 // TestTemplatePermissionsByRole checks who may add and delete custom templates, as the server
-// decides for every request: a member, a system admin and a guest (who counts as everyone: the
-// plugin doesn't tell guests apart), with each WhoCanAddTemplates setting, custom templates off
-// included.
+// decides for every request: a member, a system admin and a guest (who, as with custom emoji,
+// neither adds nor deletes, even when everyone may add), with each WhoCanAddTemplates setting,
+// custom templates off included.
 func TestTemplatePermissionsByRole(t *testing.T) {
 	png := testPNG(t, 200, 200, color.White)
 	const (
@@ -483,8 +494,8 @@ func TestTemplatePermissionsByRole(t *testing.T) {
 		canAdd  map[string]bool
 		on      bool
 	}{
-		{"", map[string]bool{member: true, admin: true, guest: true}, true},
-		{addTemplatesEveryone, map[string]bool{member: true, admin: true, guest: true}, true},
+		{"", map[string]bool{member: true, admin: true, guest: false}, true},
+		{addTemplatesEveryone, map[string]bool{member: true, admin: true, guest: false}, true},
 		{addTemplatesAdmins, map[string]bool{member: false, admin: true, guest: false}, true},
 		{addTemplatesNobody, map[string]bool{member: false, admin: false, guest: false}, false},
 	} {
@@ -506,22 +517,27 @@ func TestTemplatePermissionsByRole(t *testing.T) {
 	}
 
 	t.Run("deleting", func(t *testing.T) {
-		p := newTestPlugin(customAPI())
+		// The guest was a member when they added theirs.
+		guests := map[string]bool{}
+		p := newTestPlugin(customAPIWith(guests))
 		for _, user := range []string{member, guest} {
 			require.Equal(t, http.StatusCreated, add(p, user, "By "+user))
 		}
+		guests[guest] = true
 		list := templatesFor(t, p, member)
 		assert.Equal(t, member, list["by-priya"].CreatorID, "the creator, for the picker's list")
 		assert.NotZero(t, list["by-priya"].CreateAt)
 		assert.True(t, list["by-priya"].CanDelete)
 		assert.False(t, list["by-gina"].CanDelete)
 		assert.False(t, templatesFor(t, p, guest)["by-priya"].CanDelete)
+		assert.False(t, templatesFor(t, p, guest)["by-gina"].CanDelete, "a guest, their own")
 		assert.True(t, templatesFor(t, p, admin)["by-gina"].CanDelete)
 
 		assert.Equal(t, http.StatusForbidden, del(p, guest, "by-priya"), "a guest, another's")
+		assert.Equal(t, http.StatusForbidden, del(p, guest, "by-gina"), "a guest, their own")
 		assert.Equal(t, http.StatusForbidden, del(p, member, "by-gina"), "a member, another's")
 		assert.Equal(t, http.StatusForbidden, del(p, admin, "drake"), "built-in")
-		assert.Equal(t, http.StatusOK, del(p, guest, "by-gina"), "a guest, their own")
+		assert.Equal(t, http.StatusOK, del(p, admin, "by-gina"), "a system admin, a guest's")
 
 		// Custom templates turned off: nothing new, but what's there can still be cleaned up.
 		p.setConfiguration(&configuration{WhoCanAddTemplates: addTemplatesNobody})

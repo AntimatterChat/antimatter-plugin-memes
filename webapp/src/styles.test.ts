@@ -1,5 +1,5 @@
 // Copyright (c) 2026-present Antimatter contributors.
-// See LICENSE.txt for license information.
+// See LICENSE for license information.
 
 import fs from 'fs';
 import path from 'path';

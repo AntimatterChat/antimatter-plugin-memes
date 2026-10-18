@@ -10,7 +10,7 @@ const pixels = (line: string, prop: string) => Number(new RegExp(`(?:\\{|;)\\s*$
 
 describe('the add view fits the Fusion picker without scrolling', () => {
     // The host's drop zone gives the preview beside its button 72px.
-    test('the template\\'s preview stays as low as the drop zone', () => {
+    test('the template\'s preview stays as low as the drop zone', () => {
         expect(pixels(rule('.am-pv .ammemes-add-preview'), 'height')).toBeLessThanOrEqual(64);
         expect(pixels(rule('.am-pv .ammemes-add-preview > svg, .am-pv .ammemes-add-preview > img'), 'max-height')).toBeLessThanOrEqual(64);
     });

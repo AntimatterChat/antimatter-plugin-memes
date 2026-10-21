@@ -398,13 +398,13 @@ func (p *Plugin) postMeme(userID string, req postRequest) (*model.Post, error) {
 	if custom != nil {
 		captions = custom.apply(captions)
 	}
-	if err := captions.Validate(); err != nil {
+	if err = captions.Validate(); err != nil {
 		return nil, &apiError{http.StatusBadRequest, err.Error()}
 	}
 	if captions.Empty() {
 		return nil, &apiError{http.StatusBadRequest, "write something on the meme"}
 	}
-	if err := p.checkCanPost(userID, req.ChannelID, req.RootID); err != nil {
+	if err = p.checkCanPost(userID, req.ChannelID, req.RootID); err != nil {
 		return nil, err
 	}
 
@@ -518,7 +518,11 @@ func (p *Plugin) handleAddTemplate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, &apiError{http.StatusBadRequest, "an image is required"})
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			p.API.LogWarn("Could not close an uploaded template image", "error", closeErr.Error())
+		}
+	}()
 	if header.Size > maxUploadBytes {
 		writeError(w, tooLarge)
 		return

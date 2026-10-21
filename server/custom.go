@@ -153,7 +153,7 @@ func uniqueName(base string, taken func(string) bool) string {
 func parseKeywords(s string) []string {
 	var out []string
 	seen := map[string]bool{}
-	for _, k := range strings.Split(s, ",") {
+	for k := range strings.SplitSeq(s, ",") {
 		k = strings.ToLower(strings.Join(strings.Fields(k), " "))
 		if k == "" || seen[k] {
 			continue

@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"strings"
 	"unicode"
 
@@ -84,6 +85,23 @@ func (s *TextSlot) Render(img draw.Image, text string) {
 	}
 }
 
+// Pixel values an Int26_6 holds: 26 bits of integer part.
+const (
+	minFixedPixels = math.MinInt32 >> 6
+	maxFixedPixels = math.MaxInt32 >> 6
+)
+
+// toFixed turns a number of pixels into 26.6 fixed point, clamped to what an Int26_6 holds.
+func toFixed(pixels int) fixed.Int26_6 {
+	if pixels < minFixedPixels {
+		return fixed.I(minFixedPixels)
+	}
+	if pixels > maxFixedPixels {
+		return fixed.I(maxFixedPixels)
+	}
+	return fixed.I(pixels)
+}
+
 type TextLayout struct {
 	Face          font.Face
 	Lines         []string
@@ -96,8 +114,8 @@ func (s *TextSlot) TextLayout(text string) *TextLayout {
 		fontSize = 80.0
 	}
 
-	hlimit := fixed.Int26_6(s.Bounds.Dx() * 64)
-	vlimit := fixed.Int26_6(s.Bounds.Dy() * 64)
+	hlimit := toFixed(s.Bounds.Dx())
+	vlimit := toFixed(s.Bounds.Dy())
 
 	for fontSize >= 6.0 {
 		face := truetype.NewFace(s.Font, &truetype.Options{
@@ -116,8 +134,8 @@ func (s *TextSlot) TextLayout(text string) *TextLayout {
 			LinePositions: make([]fixed.Point26_6, len(lines)),
 		}
 
-		y := fixed.Int26_6(s.Bounds.Min.Y * 64)
-		totalHeight := face.Metrics().Height.Mul(fixed.Int26_6(len(lines) * 64))
+		y := toFixed(s.Bounds.Min.Y)
+		totalHeight := face.Metrics().Height.Mul(toFixed(len(lines)))
 		switch s.VerticalAlignment {
 		case Middle:
 			y += (vlimit - totalHeight) / 2
@@ -126,7 +144,7 @@ func (s *TextSlot) TextLayout(text string) *TextLayout {
 		}
 
 		for i, width := range widths {
-			x := fixed.Int26_6(s.Bounds.Min.X * 64)
+			x := toFixed(s.Bounds.Min.X)
 			switch s.HorizontalAlignment {
 			case Center:
 				x += (hlimit - width) / 2

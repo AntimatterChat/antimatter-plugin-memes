@@ -3,6 +3,7 @@ package memelibrary
 import (
 	"image"
 	"image/color"
+	"math"
 	"regexp"
 	"strings"
 
@@ -79,7 +80,7 @@ func (m *Metadata) TextSlots(bounds image.Rectangle) (slots []*meme.TextSlot) {
 			}
 			slots = append(slots, textSlot)
 		}
-		return
+		return slots
 	}
 
 	padding := bounds.Dy() / 20
@@ -101,18 +102,30 @@ func (m *Metadata) TextSlots(bounds image.Rectangle) (slots []*meme.TextSlot) {
 	}
 }
 
+// sliceToColor reads a template's text colour, of 8-bit values: gray, gray and alpha, RGB or RGBA.
 func sliceToColor(s []int) color.Color {
 	switch len(s) {
 	case 1:
-		return color.Gray16{uint16(s[0]) << 1}
+		return color.Gray{toUint8(s[0])}
 	case 2:
-		return color.RGBA{uint8(s[0]), uint8(s[0]), uint8(s[0]), uint8(s[1])}
+		return color.RGBA{toUint8(s[0]), toUint8(s[0]), toUint8(s[0]), toUint8(s[1])}
 	case 3:
-		return color.RGBA{uint8(s[0]), uint8(s[1]), uint8(s[2]), 255}
+		return color.RGBA{toUint8(s[0]), toUint8(s[1]), toUint8(s[2]), math.MaxUint8}
 	case 4:
-		return color.RGBA{uint8(s[0]), uint8(s[1]), uint8(s[2]), uint8(s[3])}
+		return color.RGBA{toUint8(s[0]), toUint8(s[1]), toUint8(s[2]), toUint8(s[3])}
 	}
 	return nil
+}
+
+// toUint8 clamps a colour value to 0–255.
+func toUint8(v int) uint8 {
+	if v < 0 {
+		return 0
+	}
+	if v > math.MaxUint8 {
+		return math.MaxUint8
+	}
+	return uint8(v)
 }
 
 func (p *Pattern) Match(input string) (text []string) {

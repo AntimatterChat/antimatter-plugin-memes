@@ -16,10 +16,12 @@ import (
 	"github.com/antimatterchat/antimatter-plugin-memes/server/meme"
 )
 
-var fonts = make(map[string]*truetype.Font)
-var images = make(map[string]image.Image)
-var metadata = make(map[string]*Metadata)
-var templates = make(map[string]*meme.Template)
+var (
+	fonts     = make(map[string]*truetype.Font)
+	images    = make(map[string]image.Image)
+	metadata  = make(map[string]*Metadata)
+	templates = make(map[string]*meme.Template)
+)
 
 func isImageAsset(assetName string) bool {
 	ext := strings.ToLower(filepath.Ext(assetName))

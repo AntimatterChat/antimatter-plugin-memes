@@ -205,8 +205,17 @@ func TestNormalizeImage(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, statusFor(err), "too small")
 }
 
+// The EXIF segment jpegWithOrientation adds: a TIFF header and one IFD with one entry.
+const (
+	tiffSize  = 8 + 2 + 12 + 4
+	exifSize  = len("Exif\x00\x00") + tiffSize
+	app1Size  = 2 + exifSize // its length field counts itself
+	exifStart = 2            // after the SOI marker
+	exifEnd   = exifStart + 2 + app1Size
+)
+
 // jpegWithOrientation makes a JPEG with an EXIF orientation.
-func jpegWithOrientation(t *testing.T, w, h, orientation int, order binary.ByteOrder) []byte {
+func jpegWithOrientation(t *testing.T, w, h int, orientation uint16, order binary.ByteOrder) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	for y := range h {
 		for x := range w {
@@ -223,7 +232,7 @@ func jpegWithOrientation(t *testing.T, w, h, orientation int, order binary.ByteO
 	require.NoError(t, jpeg.Encode(&buf, img, &jpeg.Options{Quality: 95}))
 	raw := buf.Bytes()
 
-	tiff := make([]byte, 8+2+12+4)
+	tiff := make([]byte, tiffSize)
 	if order == binary.LittleEndian {
 		copy(tiff, "II")
 	} else {
@@ -235,10 +244,11 @@ func jpegWithOrientation(t *testing.T, w, h, orientation int, order binary.ByteO
 	order.PutUint16(tiff[10:], 0x0112)
 	order.PutUint16(tiff[12:], 3)
 	order.PutUint32(tiff[14:], 1)
-	order.PutUint16(tiff[18:], uint16(orientation))
+	order.PutUint16(tiff[18:], orientation)
 	segment := append([]byte("Exif\x00\x00"), tiff...)
+	require.Len(t, segment, exifSize)
 	app1 := []byte{0xFF, 0xE1, 0, 0}
-	binary.BigEndian.PutUint16(app1[2:], uint16(len(segment)+2))
+	binary.BigEndian.PutUint16(app1[2:], uint16(app1Size)) // a constant: the compiler checks it fits
 	out := append([]byte{}, raw[:2]...)
 	out = append(out, app1...)
 	out = append(out, segment...)
@@ -249,7 +259,12 @@ func TestEXIFOrientation(t *testing.T) {
 	assert.Equal(t, 6, jpegOrientation(jpegWithOrientation(t, 80, 120, 6, binary.BigEndian)))
 	assert.Equal(t, 8, jpegOrientation(jpegWithOrientation(t, 80, 120, 8, binary.LittleEndian)))
 	assert.Equal(t, 1, jpegOrientation(testPNG(t, 80, 80, color.White)))
-	assert.Equal(t, 1, jpegOrientation([]byte{0xFF, 0xD8, 0xFF, 0xE1, 0xFF}), "truncated")
+	// Cut anywhere before the end of its EXIF segment, a JPEG has no orientation, and no panic
+	exif := jpegWithOrientation(t, 80, 120, 6, binary.BigEndian)
+	for n := range exifEnd {
+		assert.Equal(t, 1, jpegOrientation(exif[:n]), "truncated to %d bytes", n)
+	}
+	assert.Equal(t, 6, jpegOrientation(exif[:exifEnd]), "its EXIF segment whole")
 
 	isRed := func(c color.Color) bool {
 		r, g, _, _ := c.RGBA()

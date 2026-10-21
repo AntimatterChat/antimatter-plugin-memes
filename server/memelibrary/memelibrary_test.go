@@ -1,6 +1,7 @@
 package memelibrary
 
 import (
+	"image/color"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,4 +44,14 @@ func TestPatternMatch(t *testing.T) {
 			assert.NotNil(t, text)
 		}
 	}
+}
+
+func TestSliceToColorClampsValues(t *testing.T) {
+	assert.Equal(t, color.RGBA{255, 0, 128, 255}, sliceToColor([]int{255, 0, 128}))
+	assert.Equal(t, color.RGBA{255, 0, 10, 255}, sliceToColor([]int{300, -5, 10}), "out of 0–255, clamped, not wrapped")
+	assert.Equal(t, color.RGBA{0, 0, 0, 255}, sliceToColor([]int{-1, -1, -1, 1000}))
+	assert.Equal(t, color.RGBA{200, 200, 200, 0}, sliceToColor([]int{200, -20}))
+	assert.Equal(t, color.Gray{255}, sliceToColor([]int{256}))
+	assert.Nil(t, sliceToColor(nil))
+	assert.Nil(t, sliceToColor([]int{1, 2, 3, 4, 5}))
 }

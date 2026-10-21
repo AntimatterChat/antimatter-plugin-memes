@@ -56,21 +56,22 @@ func demo(args []string) error {
 	}
 
 	if *out != "" {
-		f, err := os.Create(*out)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
 		img, err := template.Render(text)
 		if err != nil {
 			return err
 		}
-		if err := jpeg.Encode(f, img, &jpeg.Options{
-			Quality: 100,
-		}); err != nil {
+		f, err := os.Create(*out)
+		if err != nil {
 			return err
 		}
+		if err = jpeg.Encode(f, img, &jpeg.Options{
+			Quality: 100,
+		}); err != nil {
+			_ = f.Close() // the encoding error is the one to tell
+			return err
+		}
+		// A file that doesn't close may not be written
+		return f.Close()
 	}
 
 	return nil
@@ -145,7 +146,7 @@ func (p *Plugin) OnPluginClusterEvent(_ *plugin.Context, ev model.PluginClusterE
 }
 
 func createMemesCommand(custom []string) *model.Command {
-	var availableMemes = getAvailableMemes(custom)
+	availableMemes := getAvailableMemes(custom)
 	memes := model.NewAutocompleteData(memeCommand, "[template]", "Make a meme from a template")
 
 	for _, name := range availableMemes {
